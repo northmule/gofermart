@@ -1,0 +1,25 @@
+version: '3.7'
+services:
+  shorturl_postgres:
+    build: .
+    container_name: ${DB_CONTAINER_NAME}
+    command: postgres -c config_file=/etc/postgresql.conf -c hba_file=/etc/pg_hba.conf
+    ports:
+    - ${DB_EXTERNAL_PORT}:5432
+    volumes:
+    - ${DB_EXTERNAL_DATA}:/var/lib/postgresql/data
+    - ./postgresql.conf:/etc/postgresql.conf
+    - ./pg_hba.conf:/etc/pg_hba.conf
+    environment:
+      POSTGRES_PASSWORD: ${APP_DB_PASSWORD}
+      POSTGRES_USER: ${APP_DB_USER}
+      POSTGRES_DB: ${APP_DB_NAME}
+      TZ: "Europe/Moscow"
+    networks:
+       outside-network:
+        aliases:
+             - ${DB_CONTAINER_NAME}
+networks:
+  outside-network:
+    external: true
+    name: ${SERVICE_NETWORK_NAME}
