@@ -1,4 +1,4 @@
-package auntificator
+package authentication
 
 import (
 	"crypto/hmac"
@@ -9,11 +9,9 @@ import (
 	"time"
 )
 
-// idCookieSize размер в байтах места под id пользователя
-const idCookieSize = 4
-const CookieAuthName = "shorturl_session"
+const CookieAuthName = "gophermart_session"
 const HMACTokenExp = time.Hour * 600
-const HMACSecretKey = "super_secret_key"
+const HMACSecretKey = "super_secret_key_gophermart"
 
 func GetUserToken(req *http.Request) string {
 	token := req.Header.Get("Authorization")

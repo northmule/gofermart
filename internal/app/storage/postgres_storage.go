@@ -17,6 +17,7 @@ type DBQuery interface {
 	PingContext(ctx context.Context) error
 	Begin() (*sql.Tx, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+	Prepare(query string) (*sql.Stmt, error)
 }
 
 type PostgresStorage struct {

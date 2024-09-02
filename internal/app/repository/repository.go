@@ -7,6 +7,7 @@ type Manager struct {
 	Accrual   *AccrualRepository
 	Order     *OrderRepository
 	Withdrawn *WithdrawnRepository
+	Balance   *BalanceRepository
 }
 
 func NewManager(db storage.DBQuery) *Manager {
@@ -15,6 +16,7 @@ func NewManager(db storage.DBQuery) *Manager {
 		Accrual:   NewAccrualRepository(db),
 		Order:     NewOrderRepository(db),
 		Withdrawn: NewWithdrawnRepository(db),
+		Balance:   NewBalanceRepository(db),
 	}
 
 	return instance

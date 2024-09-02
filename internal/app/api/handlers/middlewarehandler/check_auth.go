@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 	"github.com/google/uuid"
-	AppContext "github.com/northmule/gofermart/internal/app/context"
+	AppContext "github.com/northmule/gofermart/internal/app/api/context"
 	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/auntificator"
+	"github.com/northmule/gofermart/internal/app/services/authentication"
 	"github.com/northmule/gofermart/internal/app/services/logger"
 	"github.com/northmule/gofermart/internal/app/services/url"
 	"github.com/northmule/gofermart/internal/app/storage"
@@ -34,7 +34,7 @@ func (c *CheckAuth) AuthEveryone(next http.Handler) http.Handler {
 		if req.Method == http.MethodGet && req.URL.Path == "/api/user/urls" {
 			isUserUrls = true
 		}
-		authorizationToken := auntificator.GetUserToken(req)
+		authorizationToken := authentication.GetUserToken(req)
 
 		var userUUID string
 		if authorizationToken == "" {
@@ -44,7 +44,7 @@ func (c *CheckAuth) AuthEveryone(next http.Handler) http.Handler {
 				return
 			}
 			userUUID = uuid.NewString()
-			token, tokenExp := auntificator.GenerateToken(userUUID, auntificator.HMACTokenExp, auntificator.HMACSecretKey)
+			token, tokenExp := authentication.GenerateToken(userUUID, authentication.HMACTokenExp, authentication.HMACSecretKey)
 			logger.LogSugar.Infof("Куки не переданы, создаю нового пользователя с uuid %s", userUUID)
 			c.createUser(userUUID)
 			res = c.authorization(res, userUUID, token, tokenExp)
@@ -58,10 +58,10 @@ func (c *CheckAuth) AuthEveryone(next http.Handler) http.Handler {
 			cookieToken := cookieValues[0]
 			userUUID = cookieValues[1]
 			logger.LogSugar.Infof("Нашёл куки для пользователя с uuid %s", userUUID)
-			if !auntificator.ValidateToken(userUUID, cookieToken, auntificator.HMACSecretKey) {
+			if !authentication.ValidateToken(userUUID, cookieToken, authentication.HMACSecretKey) {
 				userUUID = uuid.NewString()
 				logger.LogSugar.Infof("Токен не прошёл валидацию для пользователя с uuid %s. Создаю нового пользователя", userUUID)
-				token, tokenExp := auntificator.GenerateToken(userUUID, auntificator.HMACTokenExp, auntificator.HMACSecretKey)
+				token, tokenExp := authentication.GenerateToken(userUUID, authentication.HMACTokenExp, authentication.HMACSecretKey)
 				res = c.authorization(res, userUUID, token, tokenExp)
 			}
 
@@ -78,7 +78,7 @@ func (c *CheckAuth) AuthEveryone(next http.Handler) http.Handler {
 func (c *CheckAuth) authorization(res http.ResponseWriter, userUUID string, token string, tokenExp time.Time) http.ResponseWriter {
 	tokenValue := fmt.Sprintf("%s:%s", token, userUUID)
 	http.SetCookie(res, &http.Cookie{
-		Name:    auntificator.CookieAuthName,
+		Name:    authentication.CookieAuthName,
 		Value:   tokenValue,
 		Expires: tokenExp,
 		Secure:  false,

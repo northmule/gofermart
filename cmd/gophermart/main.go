@@ -31,6 +31,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	logger.LogSugar.Info("Проверка подключения к БД")
+	err = store.Ping()
+	if err != nil {
+		return err
+	}
 
 	migrations := db.NewMigrations(store.SqlDB)
 	err = migrations.Up()
