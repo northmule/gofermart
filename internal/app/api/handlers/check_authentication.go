@@ -44,9 +44,14 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 		}
 
 		user, err := c.manager.User.FindOneByUUID(userUUID)
-		if err != nil || user == nil || user.ID == 0 {
-			logger.LogSugar.Errorf("Ошибка при поиске пользователя по UUID %s, %s. ID: %d", userUUID, err.Error(), user.ID)
+		if err != nil {
+			logger.LogSugar.Errorf("Ошибка при поиске пользователя по UUID %s, %s", userUUID, err)
 			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if user == nil || user.ID == 0 {
+			logger.LogSugar.Infof("Пользователь с uuid %s не найден", userUUID)
+			res.WriteHeader(http.StatusUnauthorized)
 			return
 		}
 

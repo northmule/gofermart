@@ -1,2 +1,2 @@
 cd $GOFERMART_PROJECT_PATH
-./cmd/goose/goose -dir db/migrations create НАЗВАНИЕ_МИГРАЦИИ sql
+./cmd/goose/goose -dir db/migrations create withdrawn_table sql
