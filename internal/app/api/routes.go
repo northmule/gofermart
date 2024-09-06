@@ -5,7 +5,6 @@ import (
 	"github.com/northmule/gofermart/internal/app/api/handlers"
 	"github.com/northmule/gofermart/internal/app/repository"
 	"github.com/northmule/gofermart/internal/app/services/order"
-	"net/http"
 )
 
 type AppRoutes struct {
@@ -23,15 +22,16 @@ func NewAppRoutes(repositoryManager *repository.Manager) chi.Router {
 func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 	r := chi.NewRouter()
 
-	rstub := func(res http.ResponseWriter, req *http.Request) {
-		return
-	}
 	finalizeHandler := handlers.NewFinalizeHandler()
 	registrationHandler := handlers.NewRegistrationHandler(ar.manager)
 	checkAuthenticationHandler := handlers.NewCheckAuthenticationHandler(ar.manager)
 
 	orderService := order.NewOrderService()
 	orderHandler := handlers.NewOrderHandler(ar.manager, orderService)
+
+	balanceHandler := handlers.NewBalanceHandler(ar.manager)
+
+	withdrawHandler := handlers.NewWithdrawHandler(ar.manager, orderService)
 
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
@@ -57,11 +57,19 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 		).Get("/orders", orderHandler.OrderList)
 
 		// получение текущего баланса счёта баллов лояльности пользователя
-		r.Get("/balance", rstub)
+		r.With(
+			checkAuthenticationHandler.Check,
+		).Get("/balance", balanceHandler.Balance)
+
 		// запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
-		r.Post("/balance/withdraw", rstub)
+		r.With(
+			checkAuthenticationHandler.Check,
+		).Post("/balance/withdraw", withdrawHandler.Withdraw)
+
 		// получение информации о выводе средств с накопительного счёта пользователем
-		r.Get("/withdrawals", rstub)
+		r.With(
+			checkAuthenticationHandler.Check,
+		).Get("/withdrawals", withdrawHandler.WithdrawalsList)
 	})
 
 	return r

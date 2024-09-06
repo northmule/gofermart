@@ -3,7 +3,7 @@
 Получение информации о расчёте начислений
 
 Шаблон из: https://github.com/yandex-praktikum/go-musthave-diploma-tpl
-
+ТЗ: https://github.com/yandex-praktikum/go-musthave-group-diploma-tpl/blob/master/SPECIFICATION.md
 
 ### Алгоритм Луна онлайн: https://planetcalc.ru/2464/
 Последний разряд контрольной суммы: 0 - заказ валидный для http://localhost:8080/api/orders

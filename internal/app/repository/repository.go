@@ -12,12 +12,11 @@ type Manager struct {
 
 func NewManager(db storage.DBQuery) *Manager {
 	instance := &Manager{
-		User:      NewUserRepository(db),
-		Accrual:   NewAccrualRepository(db),
-		Order:     NewOrderRepository(db),
-		Withdrawn: NewWithdrawnRepository(db),
-		Balance:   NewBalanceRepository(db),
+		User:    NewUserRepository(db),
+		Accrual: NewAccrualRepository(db),
+		Order:   NewOrderRepository(db),
 	}
-
+	instance.Balance = NewBalanceRepository(db)
+	instance.Withdrawn = NewWithdrawnRepository(db)
 	return instance
 }

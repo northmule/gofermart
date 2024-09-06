@@ -1,10 +1,13 @@
 package models
 
-import "time"
+import (
+	"database/sql"
+)
 
 type Balance struct {
-	ID        int       `json:"id,omitempty"`
-	OrderID   string    `json:"order_id"`
-	Value     float64   `json:"value"`
-	UpdatedAt time.Time `json:"updated_at,omitempty"`
+	ID        int          `json:"id,omitempty"`
+	User      User         `json:"user"`
+	Order     Order        `json:"order"`
+	Value     float64      `json:"value"`
+	UpdatedAt sql.NullTime `json:"updated_at,omitempty"`
 }

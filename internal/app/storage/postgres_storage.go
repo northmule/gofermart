@@ -22,7 +22,7 @@ type DBQuery interface {
 
 type PostgresStorage struct {
 	DB    DBQuery
-	SqlDB *sql.DB
+	RawDB *sql.DB
 }
 
 // NewPostgresStorage PostgresStorage настройка подключения к БД
@@ -33,7 +33,7 @@ func NewPostgresStorage(dsn string) (*PostgresStorage, error) {
 	}
 	instance := &PostgresStorage{
 		DB:    db,
-		SqlDB: db,
+		RawDB: db,
 	}
 
 	return instance, nil

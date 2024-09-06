@@ -37,7 +37,7 @@ func run() error {
 		return err
 	}
 
-	migrations := db.NewMigrations(store.SqlDB)
+	migrations := db.NewMigrations(store.RawDB)
 	err = migrations.Up()
 	if err != nil {
 		return err

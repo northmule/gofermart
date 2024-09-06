@@ -4,7 +4,7 @@ import "time"
 
 type Accrual struct {
 	ID        int       `json:"id,omitempty"`
-	OrderID   string    `json:"order_id"`
+	Order     Order     `json:"order"`
 	Value     float64   `json:"value"`
 	CreatedAt time.Time `json:"created_at,omitempty"`
 }
