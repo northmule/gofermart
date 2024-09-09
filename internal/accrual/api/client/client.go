@@ -75,11 +75,15 @@ func (ac *AccrualClient) SendOrderNumber(orderNumber string) (*ResponseAccrual, 
 	if err != nil {
 		return nil, err
 	}
+	defer accrualResponse.Body.Close()
 	if ok, err := ac.isStatusOk(accrualResponse); !ok {
 		return nil, err
 	}
 
 	responseBodyRaw, err := io.ReadAll(accrualResponse.Body)
+	if err != nil {
+		return nil, err
+	}
 	ac.logger.Infof("Получен ответ от сервиса %s: %s", ServiceName, string(responseBodyRaw))
 
 	response := &ResponseAccrual{}

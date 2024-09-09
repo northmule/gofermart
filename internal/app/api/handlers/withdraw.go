@@ -81,7 +81,8 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	order, err := wh.manager.Order.FindOneByNumber(request.Order)
+	//order, err := wh.manager.Order.FindOneByNumber(request.Order)
+	order, err := wh.manager.Order.FindByNumberOrCreate(request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)

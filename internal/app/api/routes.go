@@ -38,10 +38,6 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 
 	accrualHandler := handlers.NewAccrualHandler(ar.manager)
 
-	stub := func(res http.ResponseWriter, req *http.Request) {
-		return
-	}
-
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
 		r.With(
@@ -62,7 +58,9 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 			orderHandler.UploadingOrder,
 			accrualHandler.CreateZeroAccrualForOrder,
 			jobHandler.CreateTaskToProcessNewOrder,
-		).Post("/orders", stub)
+		).Post("/orders", func(res http.ResponseWriter, req *http.Request) {
+
+		})
 
 		// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 		r.With(

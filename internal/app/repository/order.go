@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/northmule/gofermart/config"
+	"github.com/northmule/gofermart/internal/app/constants"
 	"github.com/northmule/gofermart/internal/app/repository/models"
 	"github.com/northmule/gofermart/internal/app/services/logger"
 	"github.com/northmule/gofermart/internal/app/storage"
@@ -93,6 +94,28 @@ func (o *OrderRepository) FindOneByNumber(number string) (*models.Order, error) 
 		}
 	}
 	order.User = user
+
+	return &order, nil
+}
+
+func (o *OrderRepository) FindByNumberOrCreate(orderNumber string, userID int) (*models.Order, error) {
+	order := models.Order{
+		Number: orderNumber,
+		Status: constants.OrderStatusNew,
+	}
+	currentOrder, err := o.FindOneByNumber(order.Number)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return nil, err
+	}
+	if currentOrder == nil || currentOrder.ID == 0 {
+		orderID, err := o.Save(order, userID)
+		if err != nil {
+			logger.LogSugar.Error(err)
+			return nil, err
+		}
+		order.ID = int(orderID)
+	}
 
 	return &order, nil
 }
