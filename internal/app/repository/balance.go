@@ -11,8 +11,9 @@ import (
 )
 
 type BalanceRepository struct {
-	store             storage.DBQuery
-	sqlFindByUserUUID *sql.Stmt
+	store                      storage.DBQuery
+	sqlFindByUserUUID          *sql.Stmt
+	sqlCreateBalanceByUserUUID *sql.Stmt
 }
 
 func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
@@ -27,6 +28,11 @@ func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
 				where u.uuid = $1
 				limit 1
 				`)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return nil
+	}
+	instance.sqlCreateBalanceByUserUUID, err = store.Prepare(`insert into user_balance (user_id, value) values ((select u.id from users u where u.uuid = $1 limit 1), 0) returning id;`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
@@ -59,4 +65,24 @@ func (br *BalanceRepository) FindOneByUserUUID(userUUID string) (*models.Balance
 	}
 	balance.User = user
 	return &balance, nil
+}
+
+func (br *BalanceRepository) CreateBalanceByUserUUID(userUUID string) (int64, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	defer cancel()
+	rows := br.sqlCreateBalanceByUserUUID.QueryRowContext(ctx, userUUID)
+	err := rows.Err()
+	if err != nil {
+		logger.LogSugar.Errorf("При вызове CreateBalanceByUserUUID(%s) произошла ошибка %s", userUUID, err)
+		return 0, err
+	}
+
+	var id int64
+	err = rows.Scan(&id)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+
+	return id, nil
 }

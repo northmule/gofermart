@@ -41,9 +41,6 @@ type responseWithdrawals struct {
 }
 
 func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) {
-	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
-
 	rawBody, err := io.ReadAll(req.Body)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
@@ -51,6 +48,9 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	defer req.Body.Close()
+	user := req.Context().Value(rctx.UserCtxKey).(models.User)
+	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s. Данные запроса: %s", req.URL.Path, user.UUID, string(rawBody))
+
 	var request requestWithdraw
 	if err = json.Unmarshal(rawBody, &request); err != nil {
 		logger.LogSugar.Infof("Пришли данные на списание %s. Запрос вызвал ошибку.", string(rawBody))
@@ -109,6 +109,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logger.LogSugar.Infof("Списание на сумуу %f удачно выполнено для заказа %s", request.Sum, order.Number)
 	res.Header().Set("content-type", "application/json")
 	res.WriteHeader(http.StatusOK)
 }

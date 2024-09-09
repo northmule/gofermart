@@ -11,7 +11,7 @@ import (
 const DataBaseConnectionTimeOut = 10000
 const ServerURLDefault = ":8081"
 const DatabaseURIDefault = "postgres://postgres:123@localhost:5456/gofermart?sslmode=disable"
-const AccrualURLDefault = ":8080"
+const AccrualURLDefault = "http://localhost:8091"
 
 type GophermartConfig struct {
 	// Адрес сервера и порт

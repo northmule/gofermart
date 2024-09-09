@@ -52,7 +52,7 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	responseBalanceValue, err := json.Marshal(response)
 	if err != nil {
 		http.Error(res, "Ошибка подготовки ответа", http.StatusInternalServerError)
-		logger.LogSugar.Errorf(err.Error())
+		logger.LogSugar.Error(err.Error())
 		return
 	}
 	res.Header().Set("content-type", "application/json")
@@ -62,4 +62,17 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Ответ не передан", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
+		_, err := bh.manager.Balance.CreateBalanceByUserUUID(newUser.UUID)
+		if err != nil {
+			logger.LogSugar.Errorf(err.Error())
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		next.ServeHTTP(res, req)
+	})
 }

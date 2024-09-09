@@ -3,8 +3,10 @@ package storage
 import (
 	"context"
 	"database/sql"
+	"errors"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/northmule/gofermart/config"
+	"github.com/northmule/gofermart/internal/app/services/logger"
 	_ "go.uber.org/mock/mockgen/model"
 	"time"
 )
@@ -20,9 +22,18 @@ type DBQuery interface {
 	Prepare(query string) (*sql.Stmt, error)
 }
 
+type TxDBQuery interface {
+	TxQueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error)
+	TxOpen() error
+	TxRollback() error
+	TxCommit() error
+}
+
 type PostgresStorage struct {
 	DB    DBQuery
 	RawDB *sql.DB
+	TxDB  TxDBQuery
+	tx    *sql.Tx
 }
 
 // NewPostgresStorage PostgresStorage настройка подключения к БД
@@ -43,4 +54,34 @@ func (p *PostgresStorage) Ping() error {
 	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	return p.DB.PingContext(ctx)
+}
+
+func (p *PostgresStorage) TxQueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error) {
+	rows := p.tx.QueryRowContext(ctx, query, args)
+	err := rows.Err()
+	if err != nil {
+		err = errors.Join(err, p.tx.Rollback())
+		logger.LogSugar.Error(err)
+		return nil, err
+	}
+
+	return rows, nil
+
+}
+
+func (p *PostgresStorage) TxOpen() error {
+	var err error
+	p.tx, err = p.DB.Begin()
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return err
+	}
+	return nil
+}
+
+func (p *PostgresStorage) TxRollback() error {
+	return p.tx.Rollback()
+}
+func (p *PostgresStorage) TxCommit() error {
+	return p.tx.Commit()
 }

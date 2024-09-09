@@ -70,7 +70,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			UUID:     uuid.NewString(),
 		}
 
-		userID, err := r.manager.User.Save(newUser)
+		userID, err := r.manager.User.CreateNewUser(newUser)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return

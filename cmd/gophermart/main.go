@@ -3,10 +3,12 @@ package main
 import (
 	"github.com/northmule/gofermart/config"
 	"github.com/northmule/gofermart/db"
+	"github.com/northmule/gofermart/internal/accrual/api/client"
 	"github.com/northmule/gofermart/internal/app/api"
 	"github.com/northmule/gofermart/internal/app/repository"
 	"github.com/northmule/gofermart/internal/app/services/logger"
 	"github.com/northmule/gofermart/internal/app/storage"
+	job "github.com/northmule/gofermart/internal/app/worker"
 	"log"
 	"net/http"
 )
@@ -45,6 +47,9 @@ func run() error {
 
 	repositoryManager := repository.NewManager(store.DB)
 	routes := api.NewAppRoutes(repositoryManager)
+
+	accrualClient := client.NewAccrualClient(config.AccrualURLDefault, logger.LogSugar)
+	_ = job.NewWorker(repositoryManager, accrualClient)
 
 	logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)
 	return http.ListenAndServe(cfg.ServerURL, routes)

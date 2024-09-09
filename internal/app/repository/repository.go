@@ -8,6 +8,7 @@ type Manager struct {
 	Order     *OrderRepository
 	Withdrawn *WithdrawnRepository
 	Balance   *BalanceRepository
+	Job       *JobRepository
 }
 
 func NewManager(db storage.DBQuery) *Manager {
@@ -15,6 +16,7 @@ func NewManager(db storage.DBQuery) *Manager {
 		User:    NewUserRepository(db),
 		Accrual: NewAccrualRepository(db),
 		Order:   NewOrderRepository(db),
+		Job:     NewJobRepository(db),
 	}
 	instance.Balance = NewBalanceRepository(db)
 	instance.Withdrawn = NewWithdrawnRepository(db)

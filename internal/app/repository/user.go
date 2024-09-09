@@ -97,7 +97,7 @@ func (r *UserRepository) FindOneByUUID(uuid string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) Save(user models.User) (int64, error) {
+func (r *UserRepository) CreateNewUser(user models.User) (int64, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := r.sqlCreateUser.QueryRowContext(ctx, user.Name, user.Login, user.Password, user.UUID)

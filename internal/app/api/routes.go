@@ -5,6 +5,7 @@ import (
 	"github.com/northmule/gofermart/internal/app/api/handlers"
 	"github.com/northmule/gofermart/internal/app/repository"
 	"github.com/northmule/gofermart/internal/app/services/order"
+	"net/http"
 )
 
 type AppRoutes struct {
@@ -33,10 +34,19 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 
 	withdrawHandler := handlers.NewWithdrawHandler(ar.manager, orderService)
 
+	jobHandler := handlers.NewJobHandler(ar.manager)
+
+	accrualHandler := handlers.NewAccrualHandler(ar.manager)
+
+	stub := func(res http.ResponseWriter, req *http.Request) {
+		return
+	}
+
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
 		r.With(
 			registrationHandler.Registration,
+			balanceHandler.CreateUserBalance,
 			registrationHandler.Authentication,
 		).Post("/register", finalizeHandler.FinalizeOk)
 
@@ -49,7 +59,10 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 		// загрузка пользователем номера заказа для расчёта
 		r.With(
 			checkAuthenticationHandler.Check,
-		).Post("/orders", orderHandler.UploadingOrder)
+			orderHandler.UploadingOrder,
+			accrualHandler.CreateZeroAccrualForOrder,
+			jobHandler.CreateTaskToProcessNewOrder,
+		).Post("/orders", stub)
 
 		// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 		r.With(
