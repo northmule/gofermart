@@ -1,4 +1,4 @@
-module github.com/northmule/gofermart
+module github.com/northmule/gophermart
 
 go 1.23.1
 

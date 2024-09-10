@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/northmule/gofermart/config"
+	"github.com/northmule/gophermart/config"
 	"go.uber.org/zap"
 	"io"
 	"net/http"

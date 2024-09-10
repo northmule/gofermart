@@ -2,14 +2,14 @@ package main
 
 import (
 	"fmt"
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/db"
-	"github.com/northmule/gofermart/internal/accrual/api/client"
-	"github.com/northmule/gofermart/internal/app/api"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
-	job "github.com/northmule/gofermart/internal/app/worker"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/db"
+	"github.com/northmule/gophermart/internal/accrual/api/client"
+	"github.com/northmule/gophermart/internal/app/api"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
+	job "github.com/northmule/gophermart/internal/app/worker"
 	"log"
 	"net/http"
 )

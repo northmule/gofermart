@@ -3,7 +3,7 @@ package db
 import (
 	"database/sql"
 	"embed"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/pressly/goose/v3"
 )
 

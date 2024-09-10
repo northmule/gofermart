@@ -2,10 +2,10 @@ package handlers
 
 import (
 	"context"
-	"github.com/northmule/gofermart/internal/app/api/rctx"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/services/authentication"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/api/rctx"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/authentication"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 	"strings"
 )

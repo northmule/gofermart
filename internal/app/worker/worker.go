@@ -2,11 +2,11 @@ package job
 
 import (
 	"errors"
-	"github.com/northmule/gofermart/internal/accrual/api/client"
-	"github.com/northmule/gofermart/internal/app/constants"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/accrual/api/client"
+	"github.com/northmule/gophermart/internal/app/constants"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 )
 
 const workerNum = 3

@@ -1,6 +1,6 @@
 package order
 
-import "github.com/northmule/gofermart/internal/app/services/logger"
+import "github.com/northmule/gophermart/internal/app/services/logger"
 
 const (
 	NumberValidateAlg = "luhn"

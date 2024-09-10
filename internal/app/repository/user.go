@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"time"
 )
 

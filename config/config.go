@@ -3,7 +3,7 @@ package config
 import (
 	"flag"
 	"github.com/caarlos0/env"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"os"
 	"strings"
 )

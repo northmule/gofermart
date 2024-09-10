@@ -1,8 +1,8 @@
 package middlewarehandler
 
 import (
-	"github.com/northmule/gofermart/internal/app/services/compressor"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/services/compressor"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 	"strings"
 )

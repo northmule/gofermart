@@ -1,6 +1,6 @@
 package repository
 
-import "github.com/northmule/gofermart/internal/app/storage"
+import "github.com/northmule/gophermart/internal/app/storage"
 
 type Manager struct {
 	User      *UserRepository

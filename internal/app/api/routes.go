@@ -2,9 +2,9 @@ package api
 
 import (
 	"github.com/go-chi/chi/v5"
-	"github.com/northmule/gofermart/internal/app/api/handlers"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/services/order"
+	"github.com/northmule/gophermart/internal/app/api/handlers"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/order"
 	"net/http"
 )
 
