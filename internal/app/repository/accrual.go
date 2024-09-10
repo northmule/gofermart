@@ -11,9 +11,8 @@ import (
 )
 
 type AccrualRepository struct {
-	store                         storage.DBQuery
-	sqlUpdateAccrualByOrderNumber *sql.Stmt
-	sqlCreateAccrualZeroValue     *sql.Stmt
+	store                     storage.DBQuery
+	sqlCreateAccrualZeroValue *sql.Stmt
 }
 
 func NewAccrualRepository(store storage.DBQuery) *AccrualRepository {
@@ -23,12 +22,6 @@ func NewAccrualRepository(store storage.DBQuery) *AccrualRepository {
 	var err error
 
 	instance.sqlCreateAccrualZeroValue, err = store.Prepare(`insert into accruals (order_id, value, user_id) values((select o.id from orders o where o.number = $1 limit 1), 0, (select u.id from users u where u.uuid = $2 limit 1)) returning id`)
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return nil
-	}
-
-	instance.sqlUpdateAccrualByOrderNumber, err = store.Prepare(`update accruals set order_id = (select id from orders o where o.number = $1 limit 1), value = $2`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
@@ -64,7 +57,7 @@ func (ar *AccrualRepository) UpdateTxByOrderNumber(orderNumber string, orderStat
 		logger.LogSugar.Error(err)
 		return err
 	}
-	rows := tx.QueryRowContext(ctx, `update accruals set order_id = (select id from orders o where o.number = $1 limit 1), value = $2`, orderNumber, accrual)
+	rows := tx.QueryRowContext(ctx, `update accruals set value = $2 where order_id = (select id from orders o where o.number = $1 limit 1)`, orderNumber, accrual)
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())

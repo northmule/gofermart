@@ -101,7 +101,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-
+		newOrder.ID = int(orderID)
 		res.WriteHeader(http.StatusAccepted)
 		ctx := context.WithValue(req.Context(), rctx.OrderUpload, newOrder)
 		req = req.WithContext(ctx)

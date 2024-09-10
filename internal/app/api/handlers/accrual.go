@@ -24,6 +24,7 @@ func (bh *AccrualHandler) CreateZeroAccrualForOrder(next http.Handler) http.Hand
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
 		newOrder := req.Context().Value(rctx.OrderUpload).(models.Order)
 		_, err := bh.manager.Accrual.CreateAccrualByOrderNumberAndUserUUID(newOrder.Number, newUser.UUID)
+		logger.LogSugar.Infof("Создаю информацию о нулевом списании по заказу %s", newOrder.Number)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)

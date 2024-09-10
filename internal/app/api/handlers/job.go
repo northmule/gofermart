@@ -23,11 +23,13 @@ func (jh *JobHandler) CreateTaskToProcessNewOrder(next http.Handler) http.Handle
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newOrder := req.Context().Value(rctx.OrderUpload).(models.Order)
 		_, err := jh.manager.Job.CreateJobByOrderNumber(newOrder.Number)
+
 		if err != nil {
 			logger.LogSugar.Errorf("Ошибка создания задания на обработку заказа с номером %s", newOrder.Number)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		logger.LogSugar.Infof("Создал задачу для запроса начисленных балов для заказа %s", newOrder.Number)
 		next.ServeHTTP(res, req)
 	})
 }
