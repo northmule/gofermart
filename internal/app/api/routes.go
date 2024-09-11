@@ -17,11 +17,11 @@ type AppRoutes struct {
 	logger  *logger.Logger
 }
 
-func NewAppRoutes(repositoryManager repository.Repository, ctx context.Context, ls *logger.Logger) chi.Router {
+func NewAppRoutes(repositoryManager repository.Repository, ctx context.Context, logger *logger.Logger) chi.Router {
 	instance := AppRoutes{
 		manager: repositoryManager,
 		ctx:     ctx,
-		logger:  ls,
+		logger:  logger,
 	}
 	return instance.DefiningAppRoutes()
 }
@@ -29,19 +29,15 @@ func NewAppRoutes(repositoryManager repository.Repository, ctx context.Context, 
 // DefiningAppRoutes маршруты приложения
 func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 
+	// Обработчики
 	finalizeHandler := handlers.NewFinalizeHandler()
 	registrationHandler := handlers.NewRegistrationHandler(ar.manager)
 	checkAuthenticationHandler := handlers.NewCheckAuthenticationHandler(ar.manager)
-
 	orderService := order.NewOrderService()
 	orderHandler := handlers.NewOrderHandler(ar.manager, orderService)
-
 	balanceHandler := handlers.NewBalanceHandler(ar.manager)
-
 	withdrawHandler := handlers.NewWithdrawHandler(ar.manager, orderService)
-
 	jobHandler := handlers.NewJobHandler(ar.manager)
-
 	accrualHandler := handlers.NewAccrualHandler(ar.manager)
 
 	contextMiddleware := func(next http.Handler) http.Handler {
@@ -52,10 +48,13 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 		})
 	}
 	r := chi.NewRouter()
+
+	// Общие мидлвары
 	r.Use(middleware.RequestLogger(ar.logger))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
-	r.Use(middleware.Compress(9))
+	r.Use(middleware.Compress(5))
+
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
 		r.With(
