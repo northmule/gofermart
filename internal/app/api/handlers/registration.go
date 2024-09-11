@@ -16,7 +16,7 @@ import (
 )
 
 type RegistrationHandler struct {
-	manager *repository.Manager
+	manager repository.Repository
 }
 
 type registrationRequestBody struct {
@@ -28,7 +28,7 @@ type authenticationRequestBody struct {
 	registrationRequestBody
 }
 
-func NewRegistrationHandler(manager *repository.Manager) *RegistrationHandler {
+func NewRegistrationHandler(manager repository.Repository) *RegistrationHandler {
 	instance := &RegistrationHandler{
 		manager: manager,
 	}
@@ -52,7 +52,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := r.manager.User.FindOneByLogin(request.Login)
+		user, err := r.manager.User().FindOneByLogin(request.Login)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
@@ -70,7 +70,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			UUID:     uuid.NewString(),
 		}
 
-		userID, err := r.manager.User.CreateNewUser(newUser)
+		userID, err := r.manager.User().CreateNewUser(newUser)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
@@ -108,7 +108,7 @@ func (r *RegistrationHandler) AuthenticationFromForm(next http.Handler) http.Han
 			return
 		}
 
-		user, err := r.manager.User.FindOneByLogin(request.Login)
+		user, err := r.manager.User().FindOneByLogin(request.Login)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return

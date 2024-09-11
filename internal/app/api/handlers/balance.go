@@ -10,10 +10,10 @@ import (
 )
 
 type BalanceHandler struct {
-	manager *repository.Manager
+	manager repository.Repository
 }
 
-func NewBalanceHandler(manager *repository.Manager) *BalanceHandler {
+func NewBalanceHandler(manager repository.Repository) *BalanceHandler {
 	instance := &BalanceHandler{
 		manager: manager,
 	}
@@ -29,13 +29,13 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
-	balance, err := bh.manager.Balance.FindOneByUserUUID(user.UUID)
+	balance, err := bh.manager.Balance().FindOneByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	withdrawn, err := bh.manager.Withdrawn.FindSumWithdrawnByUserUUID(user.UUID)
+	withdrawn, err := bh.manager.Withdrawn().FindSumWithdrawnByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -67,7 +67,7 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
-		_, err := bh.manager.Balance.CreateBalanceByUserUUID(newUser.UUID)
+		_, err := bh.manager.Balance().CreateBalanceByUserUUID(newUser.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)

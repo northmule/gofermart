@@ -12,12 +12,12 @@ import (
 )
 
 type AppRoutes struct {
-	manager *repository.Manager
+	manager repository.Repository
 	ctx     context.Context
 	logger  *logger.Logger
 }
 
-func NewAppRoutes(repositoryManager *repository.Manager, ctx context.Context, ls *logger.Logger) chi.Router {
+func NewAppRoutes(repositoryManager repository.Repository, ctx context.Context, ls *logger.Logger) chi.Router {
 	instance := AppRoutes{
 		manager: repositoryManager,
 		ctx:     ctx,

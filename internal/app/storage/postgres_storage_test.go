@@ -27,7 +27,7 @@ func (s *PostgresStorageTestSuite) SetupTest() {
 	s.db, s.mock, err = sqlmock.New()
 	s.Require().NoError(err)
 
-	instance, err := NewPostgresStorage(s.dsn, s.ctx)
+	instance, _ := NewPostgresStorage(s.dsn, s.ctx)
 	instance.DB = s.db
 	s.storage = instance
 }

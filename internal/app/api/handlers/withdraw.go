@@ -15,12 +15,12 @@ import (
 )
 
 type WithdrawHandler struct {
-	manager          *repository.Manager
+	manager          repository.Repository
 	orderService     *orderService.OrderService
 	regexOrderNumber *regexp.Regexp
 }
 
-func NewWithdrawHandler(manager *repository.Manager, orderService *orderService.OrderService) *WithdrawHandler {
+func NewWithdrawHandler(manager repository.Repository, orderService *orderService.OrderService) *WithdrawHandler {
 	instance := &WithdrawHandler{
 		manager:          manager,
 		orderService:     orderService,
@@ -64,7 +64,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	userBalance, err := wh.manager.Balance.FindOneByUserUUID(user.UUID)
+	userBalance, err := wh.manager.Balance().FindOneByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	}
 
 	//order, err := wh.manager.Order.FindOneByNumber(request.Order)
-	order, err := wh.manager.Order.FindByNumberOrCreate(request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
+	order, err := wh.manager.Order().FindByNumberOrCreate(request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -93,7 +93,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	existWithdraw, err := wh.manager.Withdrawn.FindOneByOrderID(order.ID)
+	existWithdraw, err := wh.manager.Withdrawn().FindOneByOrderID(order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -104,7 +104,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	_, err = wh.manager.Withdrawn.Withdraw(user.ID, request.Sum, order.ID)
+	_, err = wh.manager.Withdrawn().Withdraw(user.ID, request.Sum, order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -128,7 +128,7 @@ func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Re
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
-	withdraws, err := wh.manager.Withdrawn.FindWithdrawsByUserUUID(user.UUID)
+	withdraws, err := wh.manager.Withdrawn().FindWithdrawsByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)

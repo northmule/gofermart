@@ -17,7 +17,7 @@ import (
 )
 
 type OrderHandler struct {
-	manager          *repository.Manager
+	manager          repository.Repository
 	orderService     *orderService.OrderService
 	regexOrderNumber *regexp.Regexp
 }
@@ -29,7 +29,7 @@ type orderResponse struct {
 	UploadedAt string  `json:"uploaded_at"`
 }
 
-func NewOrderHandler(manager *repository.Manager, orderService *orderService.OrderService) *OrderHandler {
+func NewOrderHandler(manager repository.Repository, orderService *orderService.OrderService) *OrderHandler {
 	instance := &OrderHandler{
 		manager:          manager,
 		orderService:     orderService,
@@ -63,7 +63,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 		logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 		logger.LogSugar.Infof("Получин номер заказа %s, от пользователя %s", orderNumber, user.Login)
 
-		order, err := o.manager.Order.FindOneByNumber(orderNumber)
+		order, err := o.manager.Order().FindOneByNumber(orderNumber)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)
@@ -90,7 +90,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			Status: constants.OrderStatusNew,
 			User:   user,
 		}
-		orderID, err := o.manager.Order.Save(newOrder, newOrder.User.ID)
+		orderID, err := o.manager.Order().Save(newOrder, newOrder.User.ID)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)
@@ -114,7 +114,7 @@ func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
-	orders, err := o.manager.Order.FindOrdersByUserUUID(user.UUID)
+	orders, err := o.manager.Order().FindOrdersByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
