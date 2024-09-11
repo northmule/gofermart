@@ -29,8 +29,8 @@ func NewWorker(manager *repository.Manager, accrualService client.AccrualClientI
 
 	instance.jobChan = make(chan job, 1)
 
-	for i := 0; i < workerNum; i++ {
-		go instance.worker(instance.jobChan)
+	for i := 1; i <= workerNum; i++ {
+		go instance.worker(i, instance.jobChan)
 	}
 
 	go instance.producer()
@@ -62,15 +62,16 @@ func (w *Worker) producer() {
 	}
 }
 
-func (w *Worker) worker(jobCh <-chan job) {
+func (w *Worker) worker(num int, jobCh <-chan job) {
 	var errorNoContent *client.ErrorNoContent
 	var errorTooManyRequests *client.ErrorTooManyRequests
 	var errorInternalServerError *client.ErrorInternalServerError
 	var errorUndefined *client.ErrorUndefined
+	logger.LogSugar.Infof("Запуск worker %d из %d", num, workerNum)
 	for {
 		select {
 		case <-w.ctx.Done():
-			logger.LogSugar.Info("Останавливаю worker по сигналу")
+			logger.LogSugar.Infof("Останавливаю worker %d из %d по сигналу", num, workerNum)
 			return
 		case item := <-jobCh:
 			response, err := w.accrualService.SendOrderNumber(item.jobRun.OrderNumber)
