@@ -1,6 +1,8 @@
 package main
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/db"
@@ -12,16 +14,21 @@ import (
 	job "github.com/northmule/gophermart/internal/app/worker"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
 	fmt.Println("Запуск приложения Gophermart")
-	if err := run(); err != nil {
+	appCtx, appStop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer appStop()
+	if err := run(appCtx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
+func run(ctx context.Context) error {
 	err := logger.NewLogger("info")
 	if err != nil {
 		return err
@@ -33,7 +40,7 @@ func run() error {
 	}
 	logger.LogSugar.Infof("Конфигурация приложения %#v", cfg)
 	logger.LogSugar.Info("Инициализация базы данных")
-	store, err := storage.NewPostgresStorage(cfg.DatabaseURI)
+	store, err := storage.NewPostgresStorage(cfg.DatabaseURI, ctx)
 	if err != nil {
 		return err
 	}
@@ -43,20 +50,47 @@ func run() error {
 		return err
 	}
 	logger.LogSugar.Info("Инициализация миграций")
-	migrations := db.NewMigrations(store.RawDB)
+	migrations := db.NewMigrations(store.RawDB, ctx)
 	err = migrations.Up()
 	if err != nil {
 		return err
 	}
 	logger.LogSugar.Info("Инициализация менеджера репозитариев")
-	repositoryManager := repository.NewManager(store.DB)
-	routes := api.NewAppRoutes(repositoryManager)
+	repositoryManager := repository.NewManager(store.DB, ctx)
+	routes := api.NewAppRoutes(repositoryManager, ctx)
 
 	logger.LogSugar.Info("Инициализация клиента Accrual")
-	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar)
+	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar, ctx)
 	logger.LogSugar.Info("Инициализация worker-ов")
-	_ = job.NewWorker(repositoryManager, accrualClient)
+	_ = job.NewWorker(repositoryManager, accrualClient, ctx)
 
-	logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)
-	return http.ListenAndServe(cfg.ServerURL, routes)
+	httpServer := http.Server{
+		Addr:    cfg.ServerURL,
+		Handler: routes,
+	}
+	go func() {
+		logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)
+		err = httpServer.ListenAndServe()
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.LogSugar.Fatal(err)
+		}
+		if errors.Is(err, http.ErrServerClosed) {
+			logger.LogSugar.Info("Сервер остановлен")
+		}
+	}()
+
+	<-ctx.Done()
+	logger.LogSugar.Info("Получин сигнал. Останавливаю сервер...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	err = httpServer.Shutdown(shutdownCtx)
+	if err != nil {
+		return err
+	}
+
+	defer cancel()
+
+	return nil
 }

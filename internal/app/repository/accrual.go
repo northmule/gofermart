@@ -13,11 +13,13 @@ import (
 type AccrualRepository struct {
 	store                     storage.DBQuery
 	sqlCreateAccrualZeroValue *sql.Stmt
+	ctx                       context.Context
 }
 
-func NewAccrualRepository(store storage.DBQuery) *AccrualRepository {
+func NewAccrualRepository(store storage.DBQuery, ctx context.Context) *AccrualRepository {
 	instance := AccrualRepository{
 		store: store,
+		ctx:   ctx,
 	}
 	var err error
 
@@ -31,7 +33,7 @@ func NewAccrualRepository(store storage.DBQuery) *AccrualRepository {
 }
 
 func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(orderNumber string, userUUID string) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ar.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := ar.sqlCreateAccrualZeroValue.QueryRowContext(ctx, orderNumber, userUUID)
 	err := rows.Err()
@@ -50,7 +52,7 @@ func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(orderNumber s
 }
 
 func (ar *AccrualRepository) UpdateTxByOrderNumber(orderNumber string, orderStatus string, accrual float64) error {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ar.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := ar.store.Begin()
 	if err != nil {

@@ -17,11 +17,13 @@ type OrderRepository struct {
 	sqlCreateOrder          *sql.Stmt
 	sqlLinkOrderToUser      *sql.Stmt
 	sqlFindOrdersByUserUUID *sql.Stmt
+	ctx                     context.Context
 }
 
-func NewOrderRepository(store storage.DBQuery) *OrderRepository {
+func NewOrderRepository(store storage.DBQuery, ctx context.Context) *OrderRepository {
 	instance := OrderRepository{
 		store: store,
+		ctx:   ctx,
 	}
 
 	var err error
@@ -73,7 +75,7 @@ func (o *OrderRepository) FindOneByNumber(number string) (*models.Order, error) 
 	order := models.Order{}
 	user := models.User{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := o.sqlFindByNumber.QueryContext(ctx, number)
 	if err != nil {
@@ -121,7 +123,7 @@ func (o *OrderRepository) FindByNumberOrCreate(orderNumber string, userID int) (
 }
 
 func (o *OrderRepository) Save(order models.Order, userID int) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := o.sqlCreateOrder.QueryRowContext(ctx, order.Number, order.Status)
 	err := rows.Err()
@@ -147,7 +149,7 @@ func (o *OrderRepository) Save(order models.Order, userID int) (int64, error) {
 }
 
 func (o *OrderRepository) FindOrdersByUserUUID(userUUID string) (*[]models.Order, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := o.sqlFindOrdersByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {

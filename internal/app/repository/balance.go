@@ -14,11 +14,13 @@ type BalanceRepository struct {
 	store                      storage.DBQuery
 	sqlFindByUserUUID          *sql.Stmt
 	sqlCreateBalanceByUserUUID *sql.Stmt
+	ctx                        context.Context
 }
 
-func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
+func NewBalanceRepository(store storage.DBQuery, ctx context.Context) *BalanceRepository {
 	instance := BalanceRepository{
 		store: store,
+		ctx:   ctx,
 	}
 
 	var err error
@@ -42,7 +44,7 @@ func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
 }
 
 func (br *BalanceRepository) FindOneByUserUUID(userUUID string) (*models.Balance, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(br.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := br.sqlFindByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
@@ -68,7 +70,7 @@ func (br *BalanceRepository) FindOneByUserUUID(userUUID string) (*models.Balance
 }
 
 func (br *BalanceRepository) CreateBalanceByUserUUID(userUUID string) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(br.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := br.sqlCreateBalanceByUserUUID.QueryRowContext(ctx, userUUID)
 	err := rows.Err()

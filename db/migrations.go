@@ -1,6 +1,7 @@
 package db
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"github.com/northmule/gophermart/internal/app/services/logger"
@@ -10,15 +11,17 @@ import (
 type Migrations struct {
 	mFS   embed.FS
 	sqlDB *sql.DB
+	ctx   context.Context
 }
 
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
-func NewMigrations(db *sql.DB) *Migrations {
+func NewMigrations(db *sql.DB, ctx context.Context) *Migrations {
 	instance := Migrations{}
 	instance.mFS = migrationsFS
 	instance.sqlDB = db
+	instance.ctx = ctx
 	return &instance
 }
 
@@ -30,7 +33,7 @@ func (m *Migrations) Up() error {
 		return err
 	}
 
-	if err := goose.Up(m.sqlDB, "migrations"); err != nil {
+	if err := goose.UpContext(m.ctx, m.sqlDB, "migrations"); err != nil {
 		logger.LogSugar.Error(err)
 		return err
 	}

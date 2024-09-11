@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/northmule/gophermart/config"
 	"go.uber.org/zap"
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const ServiceAccrualURI = "/api/orders/{number}"
@@ -41,12 +39,14 @@ func (err ErrorUndefined) Error() string {
 type AccrualClient struct {
 	serviceURL string
 	logger     *zap.SugaredLogger
+	ctx        context.Context
 }
 
-func NewAccrualClient(serviceURL string, logger *zap.SugaredLogger) AccrualClientInterface {
+func NewAccrualClient(serviceURL string, logger *zap.SugaredLogger, ctx context.Context) AccrualClientInterface {
 	instance := &AccrualClient{
 		serviceURL: serviceURL,
 		logger:     logger,
+		ctx:        ctx,
 	}
 	return instance
 }
@@ -64,14 +64,12 @@ type ResponseAccrual struct {
 
 func (ac *AccrualClient) SendOrderNumber(orderNumber string) (*ResponseAccrual, error) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
-	defer cancel()
 	requestURL := fmt.Sprintf(
 		"%s%s", strings.TrimRight(ac.serviceURL, "/"),
 		strings.Replace(ServiceAccrualURI, "{number}", orderNumber, 1),
 	)
 	ac.logger.Infof("Поступил запрос: %s на полученине информации от сервиса %s", requestURL, ServiceName)
-	requestPrepare, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
+	requestPrepare, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -1,6 +1,7 @@
 package job
 
 import (
+	"context"
 	"errors"
 	"github.com/northmule/gophermart/internal/accrual/api/client"
 	"github.com/northmule/gophermart/internal/app/constants"
@@ -16,12 +17,14 @@ type Worker struct {
 	manager        *repository.Manager
 	accrualService client.AccrualClientInterface
 	jobChan        chan job
+	ctx            context.Context
 }
 
-func NewWorker(manager *repository.Manager, accrualService client.AccrualClientInterface) *Worker {
+func NewWorker(manager *repository.Manager, accrualService client.AccrualClientInterface, ctx context.Context) *Worker {
 	instance := Worker{
 		manager:        manager,
 		accrualService: accrualService,
+		ctx:            ctx,
 	}
 
 	instance.jobChan = make(chan job, 1)
@@ -41,14 +44,20 @@ type job struct {
 
 func (w *Worker) producer() {
 	for {
-		jobsForRun, err := w.manager.Job.GetJobForRun()
-		if err != nil {
-			logger.LogSugar.Error(err.Error())
+		select {
+		case <-w.ctx.Done():
+			logger.LogSugar.Info("Останавливаю producer по сигналу")
 			return
-		}
-		for _, jobForRun := range *jobsForRun {
-			logger.LogSugar.Infof("В работу взята задча на запрос к внешнему сервису с номером заказа %s", jobForRun.OrderNumber)
-			w.jobChan <- job{jobRun: jobForRun}
+		default:
+			jobsForRun, err := w.manager.Job.GetJobForRun()
+			if err != nil {
+				logger.LogSugar.Error(err.Error())
+				break
+			}
+			for _, jobForRun := range *jobsForRun {
+				logger.LogSugar.Infof("В работу взята задча на запрос к внешнему сервису с номером заказа %s", jobForRun.OrderNumber)
+				w.jobChan <- job{jobRun: jobForRun}
+			}
 		}
 	}
 }
@@ -58,89 +67,92 @@ func (w *Worker) worker(jobCh <-chan job) {
 	var errorTooManyRequests *client.ErrorTooManyRequests
 	var errorInternalServerError *client.ErrorInternalServerError
 	var errorUndefined *client.ErrorUndefined
+	for {
+		select {
+		case <-w.ctx.Done():
+			logger.LogSugar.Info("Останавливаю worker по сигналу")
+			return
+		case item := <-jobCh:
+			response, err := w.accrualService.SendOrderNumber(item.jobRun.OrderNumber)
+			if errors.As(err, &errorNoContent) {
+				logger.LogSugar.Info(err.Error())
+				if item.jobRun.RunCnt > maxNumberAttempts {
+					err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
+					logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
+				} else {
+					err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
+				}
+				if err != nil {
+					logger.LogSugar.Info(err.Error())
+				}
+				break
+			}
 
-	for item := range jobCh {
-		response, err := w.accrualService.SendOrderNumber(item.jobRun.OrderNumber)
-
-		if errors.As(err, &errorNoContent) {
-			logger.LogSugar.Info(err.Error())
-			if item.jobRun.RunCnt > maxNumberAttempts {
-				err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
-				logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
-			} else {
+			if errors.As(err, &errorTooManyRequests) {
+				logger.LogSugar.Info(err.Error())
 				err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
+				if err != nil {
+					logger.LogSugar.Info(err.Error())
+				}
+				break
 			}
-			if err != nil {
-				logger.LogSugar.Info(err.Error())
-			}
-			continue
-		}
 
-		if errors.As(err, &errorTooManyRequests) {
-			logger.LogSugar.Info(err.Error())
-			err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
-			if err != nil {
+			if errors.As(err, &errorInternalServerError) {
 				logger.LogSugar.Info(err.Error())
+				if item.jobRun.RunCnt > maxNumberAttempts {
+					err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
+					logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
+				} else {
+					err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
+				}
+				if err != nil {
+					logger.LogSugar.Info(err.Error())
+				}
+				break
 			}
-			continue
-		}
 
-		if errors.As(err, &errorInternalServerError) {
-			logger.LogSugar.Info(err.Error())
-			if item.jobRun.RunCnt > maxNumberAttempts {
-				err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
-				logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
-			} else {
+			if errors.As(err, &errorUndefined) {
+				logger.LogSugar.Info(err.Error())
+				if item.jobRun.RunCnt > maxNumberAttempts {
+					err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
+					logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
+				} else {
+					err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
+				}
+				if err != nil {
+					logger.LogSugar.Info(err.Error())
+				}
+				break
+			}
+			// Не пойманная ошибка
+			if err != nil {
 				err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
-			}
-			if err != nil {
-				logger.LogSugar.Info(err.Error())
-			}
-			continue
-		}
-
-		if errors.As(err, &errorUndefined) {
-			logger.LogSugar.Info(err.Error())
-			if item.jobRun.RunCnt > maxNumberAttempts {
-				err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
-				logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
-			} else {
-				err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
-			}
-			if err != nil {
-				logger.LogSugar.Info(err.Error())
-			}
-			continue
-		}
-		// Не пойманная ошибка
-		if err != nil {
-			err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
-			err = errors.Join(err)
-			logger.LogSugar.Error(err.Error())
-			continue
-		}
-		// Откладываем задачу
-		if response.Status == constants.OrderStatusNew || response.Status == constants.OrderStatusProcessing {
-			err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
-
-			if err != nil {
-				logger.LogSugar.Info(err.Error())
-			}
-			continue
-		}
-		// Обновляем начисления, статус заказа, удаляем задачу
-		if response.Status == constants.OrderStatusInvalid || response.Status == constants.OrderStatusProcessed {
-			logger.LogSugar.Infof("Обновляю информацию о начислениях по заказу %s. Будет начисленно %f", response.Order, response.Accrual)
-			err = w.manager.Accrual.UpdateTxByOrderNumber(response.Order, response.Status, response.Accrual)
-			if err != nil {
+				err = errors.Join(err)
 				logger.LogSugar.Error(err.Error())
+				break
 			}
-			err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
-			logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
-			if err != nil {
-				logger.LogSugar.Error(err.Error())
+			// Откладываем задачу
+			if response.Status == constants.OrderStatusNew || response.Status == constants.OrderStatusProcessing {
+				err = w.manager.Job.UpdateJobByOrderNumber(item.jobRun.OrderNumber)
+
+				if err != nil {
+					logger.LogSugar.Info(err.Error())
+				}
+				break
+			}
+			// Обновляем начисления, статус заказа, удаляем задачу
+			if response.Status == constants.OrderStatusInvalid || response.Status == constants.OrderStatusProcessed {
+				logger.LogSugar.Infof("Обновляю информацию о начислениях по заказу %s. Будет начисленно %f", response.Order, response.Accrual)
+				err = w.manager.Accrual.UpdateTxByOrderNumber(response.Order, response.Status, response.Accrual)
+				if err != nil {
+					logger.LogSugar.Error(err.Error())
+				}
+				err = w.manager.Job.DeleteJobByOrderNumber(item.jobRun.OrderNumber)
+				logger.LogSugar.Infof("Удалил задачу по обработке заказа %s", item.jobRun.OrderNumber)
+				if err != nil {
+					logger.LogSugar.Error(err.Error())
+				}
 			}
 		}
-
 	}
 }
