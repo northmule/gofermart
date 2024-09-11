@@ -7,7 +7,6 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/services/logger"
-	_ "go.uber.org/mock/mockgen/model"
 	"time"
 )
 

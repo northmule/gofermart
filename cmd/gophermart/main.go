@@ -31,6 +31,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	logger.LogSugar.Infof("Конфигурация приложения %#v", cfg)
 	logger.LogSugar.Info("Инициализация базы данных")
 	store, err := storage.NewPostgresStorage(cfg.DatabaseURI)
 	if err != nil {
@@ -51,8 +52,9 @@ func run() error {
 	repositoryManager := repository.NewManager(store.DB)
 	routes := api.NewAppRoutes(repositoryManager)
 
-	logger.LogSugar.Info("Инициализация клиента Accrual и worker-ов")
-	accrualClient := client.NewAccrualClient(config.AccrualURLDefault, logger.LogSugar)
+	logger.LogSugar.Info("Инициализация клиента Accrual")
+	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar)
+	logger.LogSugar.Info("Инициализация worker-ов")
 	_ = job.NewWorker(repositoryManager, accrualClient)
 
 	logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)

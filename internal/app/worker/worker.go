@@ -14,11 +14,11 @@ const maxNumberAttempts = 5
 
 type Worker struct {
 	manager        *repository.Manager
-	accrualService *client.AccrualClient
+	accrualService client.AccrualClientInterface
 	jobChan        chan job
 }
 
-func NewWorker(manager *repository.Manager, accrualService *client.AccrualClient) *Worker {
+func NewWorker(manager *repository.Manager, accrualService client.AccrualClientInterface) *Worker {
 	instance := Worker{
 		manager:        manager,
 		accrualService: accrualService,

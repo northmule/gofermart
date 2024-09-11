@@ -43,12 +43,17 @@ type AccrualClient struct {
 	logger     *zap.SugaredLogger
 }
 
-func NewAccrualClient(serviceURL string, logger *zap.SugaredLogger) *AccrualClient {
+func NewAccrualClient(serviceURL string, logger *zap.SugaredLogger) AccrualClientInterface {
 	instance := &AccrualClient{
 		serviceURL: serviceURL,
 		logger:     logger,
 	}
 	return instance
+}
+
+type AccrualClientInterface interface {
+	SendOrderNumber(orderNumber string) (*ResponseAccrual, error)
+	isStatusOk(response *http.Response) (bool, error)
 }
 
 type ResponseAccrual struct {
