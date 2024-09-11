@@ -58,7 +58,7 @@ func (p *PostgresStorage) Ping() error {
 }
 
 func (p *PostgresStorage) TxQueryRowContext(query string, args ...any) (*sql.Row, error) {
-	rows := p.tx.QueryRowContext(p.ctx, query, args)
+	rows := p.tx.QueryRowContext(p.ctx, query, args...)
 	err := rows.Err()
 	if err != nil {
 		err = errors.Join(err, p.tx.Rollback())
