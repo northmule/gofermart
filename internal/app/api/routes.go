@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/northmule/gophermart/internal/app/api/handlers"
 	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/services/order"
 	"net/http"
 )
@@ -12,19 +14,20 @@ import (
 type AppRoutes struct {
 	manager *repository.Manager
 	ctx     context.Context
+	logger  *logger.Logger
 }
 
-func NewAppRoutes(repositoryManager *repository.Manager, ctx context.Context) chi.Router {
+func NewAppRoutes(repositoryManager *repository.Manager, ctx context.Context, ls *logger.Logger) chi.Router {
 	instance := AppRoutes{
 		manager: repositoryManager,
 		ctx:     ctx,
+		logger:  ls,
 	}
 	return instance.DefiningAppRoutes()
 }
 
 // DefiningAppRoutes маршруты приложения
 func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
-	r := chi.NewRouter()
 
 	finalizeHandler := handlers.NewFinalizeHandler()
 	registrationHandler := handlers.NewRegistrationHandler(ar.manager)
@@ -48,7 +51,11 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 			next.ServeHTTP(res, requestWithAppContext)
 		})
 	}
-
+	r := chi.NewRouter()
+	r.Use(middleware.RequestLogger(ar.logger))
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Compress(9))
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
 		r.With(

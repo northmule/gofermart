@@ -29,7 +29,7 @@ func main() {
 }
 
 func run(ctx context.Context) error {
-	err := logger.NewLogger("info")
+	loggerService, err := logger.NewLogger("info")
 	if err != nil {
 		return err
 	}
@@ -57,7 +57,7 @@ func run(ctx context.Context) error {
 	}
 	logger.LogSugar.Info("Инициализация менеджера репозитариев")
 	repositoryManager := repository.NewManager(store.DB, ctx)
-	routes := api.NewAppRoutes(repositoryManager, ctx)
+	routes := api.NewAppRoutes(repositoryManager, ctx, loggerService)
 
 	logger.LogSugar.Info("Инициализация клиента Accrual")
 	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar, ctx)
