@@ -9,21 +9,18 @@ import (
 	orderService "github.com/northmule/gophermart/internal/app/services/order"
 	"io"
 	"net/http"
-	"regexp"
 	"time"
 )
 
 type WithdrawHandler struct {
-	manager          repository.Repository
-	orderService     *orderService.OrderService
-	regexOrderNumber *regexp.Regexp
+	manager      repository.Repository
+	orderService *orderService.OrderService
 }
 
 func NewWithdrawHandler(manager repository.Repository, orderService *orderService.OrderService) *WithdrawHandler {
 	instance := &WithdrawHandler{
-		manager:          manager,
-		orderService:     orderService,
-		regexOrderNumber: regexp.MustCompile(`\d+`),
+		manager:      manager,
+		orderService: orderService,
 	}
 	return instance
 }
@@ -48,7 +45,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	}
 	defer req.Body.Close()
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s. Данные запроса: %s", req.URL.Path, user.UUID, string(rawBody))
+	logger.LogSugar.Infof("Данные запроса: %s", string(rawBody))
 
 	var request requestWithdraw
 	if err = json.Unmarshal(rawBody, &request); err != nil {
@@ -116,7 +113,6 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 
 func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
 	withdraws, err := wh.manager.Withdrawn().FindWithdrawsByUserUUID(user.UUID)
 	if err != nil {

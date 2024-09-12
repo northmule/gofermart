@@ -54,6 +54,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 			res.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
 		ctx := context.WithValue(req.Context(), rctx.UserCtxKey, *user)
 		req = req.WithContext(ctx)

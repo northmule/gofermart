@@ -27,7 +27,6 @@ type responseBalance struct {
 
 func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
 	balance, err := bh.manager.Balance().FindOneByUserUUID(user.UUID)
 	if err != nil {
