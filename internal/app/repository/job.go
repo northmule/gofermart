@@ -90,9 +90,14 @@ func (jr *JobRepository) GetJobForRun() (*[]models.Job, error) {
 	}
 
 	for _, job := range jobs {
-		_, err := tx.QueryContext(ctx, `update jobs_order set is_work = true where id = $1`, job.ID)
+		rows, err := tx.QueryContext(ctx, `update jobs_order set is_work = true where id = $1`, job.ID)
+		if rows.Err() != nil {
+			err = errors.Join(rows.Err(), tx.Rollback())
+			logger.LogSugar.Errorf("При вызове GetJobForRun произошла ошибка %s", err)
+			return nil, err
+		}
 		if err != nil {
-			err = errors.Join(err, tx.Rollback())
+			err = errors.Join(err, rows.Err(), tx.Rollback())
 			logger.LogSugar.Errorf("При вызове GetJobForRun произошла ошибка %s", err)
 			return nil, err
 		}
