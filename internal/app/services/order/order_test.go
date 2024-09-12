@@ -19,11 +19,11 @@ func TestValidateOrderNumber(t *testing.T) {
 	_, _ = logger.NewLogger("info")
 	os := NewOrderService()
 
-	if !os.ValidateOrderNumber(49927398716) {
+	if !os.ValidateOrderNumber("49927398716") {
 		t.Error("Expected the number to be valid")
 	}
 
-	if os.ValidateOrderNumber(1234567812345678) {
+	if os.ValidateOrderNumber("1234567812345678") {
 		t.Error("Expected the number to be invalid")
 	}
 }

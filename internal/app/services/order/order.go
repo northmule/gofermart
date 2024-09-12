@@ -1,27 +1,44 @@
 package order
 
-import "github.com/northmule/gophermart/internal/app/services/logger"
+import (
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"regexp"
+	"strconv"
+)
 
 const (
 	NumberValidateAlg = "luhn"
 )
 
 type OrderService struct {
-	alg string
+	alg              string
+	regexOrderNumber *regexp.Regexp
 }
 
 func NewOrderService() *OrderService {
 	instance := &OrderService{
-		alg: NumberValidateAlg,
+		alg:              NumberValidateAlg,
+		regexOrderNumber: regexp.MustCompile(`\d+`),
 	}
 	return instance
 }
 
-func (os *OrderService) ValidateOrderNumber(number int) bool {
+func (os *OrderService) ValidateOrderNumber(number string) bool {
+
+	if !os.regexOrderNumber.MatchString(number) {
+		return false
+	}
+
+	orderInt, err := strconv.ParseInt(number, 10, 64)
+	if err != nil {
+		logger.LogSugar.Errorf(err.Error())
+		return false
+	}
+
 	switch os.alg {
 	case NumberValidateAlg:
-		logger.LogSugar.Infof("Проверка номера заказа %d по алгоритму Луна", number)
-		return os.luhnValid(number)
+		logger.LogSugar.Infof("Проверка номера заказа %d по алгоритму Луна", orderInt)
+		return os.luhnValid(int(orderInt))
 	}
 	logger.LogSugar.Errorf("Указанный алгоритм проверки номера заказа не реализован: %s", os.alg)
 	return false

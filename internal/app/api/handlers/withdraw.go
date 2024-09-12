@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"regexp"
-	"strconv"
 	"time"
 )
 
@@ -58,7 +57,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	if !wh.regexOrderNumber.MatchString(request.Order) || !wh.validateOrderNumber(request.Order) {
+	if !wh.orderService.ValidateOrderNumber(request.Order) {
 		logger.LogSugar.Infof("Неверный формат номера заказа %s", request.Order)
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
@@ -113,15 +112,6 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	logger.LogSugar.Infof("Списание на сумуу %f удачно выполнено для заказа %s", request.Sum, order.Number)
 	res.Header().Set("content-type", "application/json")
 	res.WriteHeader(http.StatusOK)
-}
-
-func (wh *WithdrawHandler) validateOrderNumber(orderNumber string) bool {
-	orderInt, err := strconv.ParseInt(orderNumber, 10, 64)
-	if err != nil {
-		logger.LogSugar.Error(err.Error())
-		return false
-	}
-	return wh.orderService.ValidateOrderNumber(int(orderInt))
 }
 
 func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Request) {

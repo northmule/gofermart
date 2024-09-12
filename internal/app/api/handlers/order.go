@@ -11,15 +11,12 @@ import (
 	orderService "github.com/northmule/gophermart/internal/app/services/order"
 	"io"
 	"net/http"
-	"regexp"
-	"strconv"
 	"time"
 )
 
 type OrderHandler struct {
-	manager          repository.Repository
-	orderService     *orderService.OrderService
-	regexOrderNumber *regexp.Regexp
+	manager      repository.Repository
+	orderService *orderService.OrderService
 }
 
 type orderResponse struct {
@@ -31,9 +28,8 @@ type orderResponse struct {
 
 func NewOrderHandler(manager repository.Repository, orderService *orderService.OrderService) *OrderHandler {
 	instance := &OrderHandler{
-		manager:          manager,
-		orderService:     orderService,
-		regexOrderNumber: regexp.MustCompile(`\d+`),
+		manager:      manager,
+		orderService: orderService,
 	}
 	return instance
 }
@@ -53,7 +49,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			return
 		}
 		orderNumber := string(rawBody)
-		if !o.regexOrderNumber.MatchString(orderNumber) || !o.validateOrderNumber(orderNumber) {
+		if !o.orderService.ValidateOrderNumber(orderNumber) {
 			logger.LogSugar.Infof("Неверный формат номера заказа %s", orderNumber)
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			return
@@ -149,13 +145,4 @@ func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Ответ не передан", http.StatusInternalServerError)
 		return
 	}
-}
-
-func (o *OrderHandler) validateOrderNumber(orderNumber string) bool {
-	orderInt, err := strconv.ParseInt(orderNumber, 10, 64)
-	if err != nil {
-		logger.LogSugar.Errorf(err.Error())
-		return false
-	}
-	return o.orderService.ValidateOrderNumber(int(orderInt))
 }
