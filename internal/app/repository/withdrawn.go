@@ -1,13 +1,14 @@
 package repository
 
+<<<<<<< HEAD
 import (
 	"context"
 	"database/sql"
 	"errors"
-	"github.com/northmule/gophermart/config"
-	"github.com/northmule/gophermart/internal/app/repository/models"
-	"github.com/northmule/gophermart/internal/app/services/logger"
-	"github.com/northmule/gophermart/internal/app/storage"
+	"github.com/northmule/gofermart/config"
+	"github.com/northmule/gofermart/internal/app/repository/models"
+	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gofermart/internal/app/storage"
 	"time"
 )
 
@@ -16,14 +17,19 @@ type WithdrawnRepository struct {
 	sqlFindSumWithdrawnByUserUUID *sql.Stmt
 	sqlFindOneByOrderID           *sql.Stmt
 	sqlFindWithdrawsByUserUUID    *sql.Stmt
-	ctx                           context.Context
+=======
+import "github.com/northmule/gofermart/internal/app/storage"
+
+type WithdrawnRepository struct {
+	store storage.DBQuery
+>>>>>>> 94746e2 (базовая структура)
 }
 
-func NewWithdrawnRepository(store storage.DBQuery, ctx context.Context) *WithdrawnRepository {
+func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 	instance := WithdrawnRepository{
 		store: store,
-		ctx:   ctx,
 	}
+<<<<<<< HEAD
 	var err error
 	instance.sqlFindSumWithdrawnByUserUUID, err = store.Prepare(`
 																	select 
@@ -68,7 +74,7 @@ func NewWithdrawnRepository(store storage.DBQuery, ctx context.Context) *Withdra
 
 // Withdraw списание с обновлением баланса пользователя
 func (wr *WithdrawnRepository) Withdraw(userID int, withdraw float64, orderID int) (int64, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := wr.store.Begin()
 	if err != nil {
@@ -107,7 +113,7 @@ func (wr *WithdrawnRepository) Withdraw(userID int, withdraw float64, orderID in
 }
 
 func (wr *WithdrawnRepository) FindOneByOrderID(orderID int) (*models.Withdrawn, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindOneByOrderID.QueryContext(ctx, orderID)
 	if err != nil {
@@ -131,7 +137,7 @@ func (wr *WithdrawnRepository) FindOneByOrderID(orderID int) (*models.Withdrawn,
 }
 
 func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(userUUID string) (float64, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindSumWithdrawnByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
@@ -155,7 +161,7 @@ func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(userUUID string) (floa
 }
 
 func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(userUUID string) (*[]models.Withdrawn, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindWithdrawsByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
@@ -183,3 +189,8 @@ func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(userUUID string) (*[]mode
 
 	return &withdraws, nil
 }
+=======
+
+	return &instance
+}
+>>>>>>> 94746e2 (базовая структура)

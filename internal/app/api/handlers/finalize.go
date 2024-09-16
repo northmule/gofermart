@@ -2,7 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gofermart/internal/app/services/logger"
 	"net/http"
 )
 

@@ -4,7 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
-	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gofermart/internal/app/services/logger"
 	"net/http"
 	"time"
 )
