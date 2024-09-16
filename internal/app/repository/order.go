@@ -3,10 +3,11 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/internal/app/constants"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"time"
 )
 
@@ -16,11 +17,13 @@ type OrderRepository struct {
 	sqlCreateOrder          *sql.Stmt
 	sqlLinkOrderToUser      *sql.Stmt
 	sqlFindOrdersByUserUUID *sql.Stmt
+	ctx                     context.Context
 }
 
-func NewOrderRepository(store storage.DBQuery) *OrderRepository {
+func NewOrderRepository(store storage.DBQuery, ctx context.Context) *OrderRepository {
 	instance := OrderRepository{
 		store: store,
+		ctx:   ctx,
 	}
 
 	var err error
@@ -72,7 +75,7 @@ func (o *OrderRepository) FindOneByNumber(number string) (*models.Order, error) 
 	order := models.Order{}
 	user := models.User{}
 
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := o.sqlFindByNumber.QueryContext(ctx, number)
 	if err != nil {
@@ -97,8 +100,30 @@ func (o *OrderRepository) FindOneByNumber(number string) (*models.Order, error) 
 	return &order, nil
 }
 
+func (o *OrderRepository) FindByNumberOrCreate(orderNumber string, userID int) (*models.Order, error) {
+	order := models.Order{
+		Number: orderNumber,
+		Status: constants.OrderStatusNew,
+	}
+	currentOrder, err := o.FindOneByNumber(order.Number)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return nil, err
+	}
+	if currentOrder == nil || currentOrder.ID == 0 {
+		orderID, err := o.Save(order, userID)
+		if err != nil {
+			logger.LogSugar.Error(err)
+			return nil, err
+		}
+		order.ID = int(orderID)
+	}
+
+	return &order, nil
+}
+
 func (o *OrderRepository) Save(order models.Order, userID int) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := o.sqlCreateOrder.QueryRowContext(ctx, order.Number, order.Status)
 	err := rows.Err()
@@ -124,7 +149,7 @@ func (o *OrderRepository) Save(order models.Order, userID int) (int64, error) {
 }
 
 func (o *OrderRepository) FindOrdersByUserUUID(userUUID string) (*[]models.Order, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(o.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := o.sqlFindOrdersByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {

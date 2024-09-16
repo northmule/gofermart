@@ -5,18 +5,18 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/northmule/gofermart/internal/app/api/rctx"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/authentication"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/util"
+	"github.com/northmule/gophermart/internal/app/api/rctx"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/authentication"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/util"
 	"io"
 	"net/http"
 )
 
 type RegistrationHandler struct {
-	manager *repository.Manager
+	manager repository.Repository
 }
 
 type registrationRequestBody struct {
@@ -28,7 +28,7 @@ type authenticationRequestBody struct {
 	registrationRequestBody
 }
 
-func NewRegistrationHandler(manager *repository.Manager) *RegistrationHandler {
+func NewRegistrationHandler(manager repository.Repository) *RegistrationHandler {
 	instance := &RegistrationHandler{
 		manager: manager,
 	}
@@ -52,7 +52,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := r.manager.User.FindOneByLogin(request.Login)
+		user, err := r.manager.User().FindOneByLogin(request.Login)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
@@ -70,7 +70,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			UUID:     uuid.NewString(),
 		}
 
-		userID, err := r.manager.User.Save(newUser)
+		userID, err := r.manager.User().CreateNewUser(newUser)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
@@ -108,7 +108,7 @@ func (r *RegistrationHandler) AuthenticationFromForm(next http.Handler) http.Han
 			return
 		}
 
-		user, err := r.manager.User.FindOneByLogin(request.Login)
+		user, err := r.manager.User().FindOneByLogin(request.Login)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return

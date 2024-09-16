@@ -2,29 +2,25 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/northmule/gofermart/internal/app/api/rctx"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	orderService "github.com/northmule/gofermart/internal/app/services/order"
+	"github.com/northmule/gophermart/internal/app/api/rctx"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	orderService "github.com/northmule/gophermart/internal/app/services/order"
 	"io"
 	"net/http"
-	"regexp"
-	"strconv"
 	"time"
 )
 
 type WithdrawHandler struct {
-	manager          *repository.Manager
-	orderService     *orderService.OrderService
-	regexOrderNumber *regexp.Regexp
+	manager      repository.Repository
+	orderService *orderService.OrderService
 }
 
-func NewWithdrawHandler(manager *repository.Manager, orderService *orderService.OrderService) *WithdrawHandler {
+func NewWithdrawHandler(manager repository.Repository, orderService *orderService.OrderService) *WithdrawHandler {
 	instance := &WithdrawHandler{
-		manager:          manager,
-		orderService:     orderService,
-		regexOrderNumber: regexp.MustCompile(`\d+`),
+		manager:      manager,
+		orderService: orderService,
 	}
 	return instance
 }
@@ -41,9 +37,6 @@ type responseWithdrawals struct {
 }
 
 func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) {
-	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
-
 	rawBody, err := io.ReadAll(req.Body)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
@@ -51,6 +44,9 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	defer req.Body.Close()
+	user := req.Context().Value(rctx.UserCtxKey).(models.User)
+	logger.LogSugar.Infof("Данные запроса: %s", string(rawBody))
+
 	var request requestWithdraw
 	if err = json.Unmarshal(rawBody, &request); err != nil {
 		logger.LogSugar.Infof("Пришли данные на списание %s. Запрос вызвал ошибку.", string(rawBody))
@@ -58,13 +54,13 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	if !wh.regexOrderNumber.MatchString(request.Order) || !wh.validateOrderNumber(request.Order) {
+	if !wh.orderService.ValidateOrderNumber(request.Order) {
 		logger.LogSugar.Infof("Неверный формат номера заказа %s", request.Order)
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
 
-	userBalance, err := wh.manager.Balance.FindOneByUserUUID(user.UUID)
+	userBalance, err := wh.manager.Balance().FindOneByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -81,7 +77,8 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	order, err := wh.manager.Order.FindOneByNumber(request.Order)
+	//order, err := wh.manager.Order.FindOneByNumber(request.Order)
+	order, err := wh.manager.Order().FindByNumberOrCreate(request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -92,7 +89,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	existWithdraw, err := wh.manager.Withdrawn.FindOneByOrderID(order.ID)
+	existWithdraw, err := wh.manager.Withdrawn().FindOneByOrderID(order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -103,30 +100,21 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	_, err = wh.manager.Withdrawn.Withdraw(user.ID, request.Sum, order.ID)
+	_, err = wh.manager.Withdrawn().Withdraw(user.ID, request.Sum, order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	logger.LogSugar.Infof("Списание на сумуу %f удачно выполнено для заказа %s", request.Sum, order.Number)
 	res.Header().Set("content-type", "application/json")
 	res.WriteHeader(http.StatusOK)
 }
 
-func (wh *WithdrawHandler) validateOrderNumber(orderNumber string) bool {
-	orderInt, err := strconv.ParseInt(orderNumber, 10, 64)
-	if err != nil {
-		logger.LogSugar.Error(err.Error())
-		return false
-	}
-	return wh.orderService.ValidateOrderNumber(int(orderInt))
-}
-
 func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
-	withdraws, err := wh.manager.Withdrawn.FindWithdrawsByUserUUID(user.UUID)
+	withdraws, err := wh.manager.Withdrawn().FindWithdrawsByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)

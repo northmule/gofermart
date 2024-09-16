@@ -1,33 +1,46 @@
 package main
 
 import (
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/db"
-	"github.com/northmule/gofermart/internal/app/api"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
+	"context"
+	"errors"
+	"fmt"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/db"
+	"github.com/northmule/gophermart/internal/accrual/api/client"
+	"github.com/northmule/gophermart/internal/app/api"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
+	job "github.com/northmule/gophermart/internal/app/worker"
 	"log"
 	"net/http"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 func main() {
-	if err := run(); err != nil {
+	fmt.Println("Запуск приложения Gophermart")
+	appCtx, appStop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer appStop()
+	if err := run(appCtx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func run() error {
-	err := logger.NewLogger("info")
+func run(ctx context.Context) error {
+	loggerService, err := logger.NewLogger("info")
 	if err != nil {
 		return err
 	}
+	logger.LogSugar.Info("Инициализация конфигурации")
 	cfg, err := config.NewGophermartConfig()
 	if err != nil {
 		return err
 	}
-
-	store, err := storage.NewPostgresStorage(cfg.DatabaseURI)
+	logger.LogSugar.Infof("Конфигурация приложения %#v", cfg)
+	logger.LogSugar.Info("Инициализация базы данных")
+	store, err := storage.NewPostgresStorage(cfg.DatabaseURI, ctx)
 	if err != nil {
 		return err
 	}
@@ -36,16 +49,48 @@ func run() error {
 	if err != nil {
 		return err
 	}
-
-	migrations := db.NewMigrations(store.RawDB)
+	logger.LogSugar.Info("Инициализация миграций")
+	migrations := db.NewMigrations(store.RawDB, ctx)
 	err = migrations.Up()
 	if err != nil {
 		return err
 	}
+	logger.LogSugar.Info("Инициализация менеджера репозитариев")
+	repositoryManager := repository.NewManager(store.DB, ctx)
+	routes := api.NewAppRoutes(repositoryManager, ctx, loggerService)
 
-	repositoryManager := repository.NewManager(store.DB)
-	routes := api.NewAppRoutes(repositoryManager)
+	logger.LogSugar.Info("Инициализация клиента Accrual")
+	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar, ctx)
+	logger.LogSugar.Info("Инициализация worker-ов")
+	_ = job.NewWorker(repositoryManager, accrualClient, ctx)
 
-	logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)
-	return http.ListenAndServe(cfg.ServerURL, routes)
+	httpServer := http.Server{
+		Addr:    cfg.ServerURL,
+		Handler: routes,
+	}
+	go func() {
+		logger.LogSugar.Infof("Running server on - %s", cfg.ServerURL)
+		err = httpServer.ListenAndServe()
+
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			logger.LogSugar.Fatal(err)
+		}
+		if errors.Is(err, http.ErrServerClosed) {
+			logger.LogSugar.Info("Сервер остановлен")
+		}
+	}()
+
+	<-ctx.Done()
+	logger.LogSugar.Info("Получин сигнал. Останавливаю сервер...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	err = httpServer.Shutdown(shutdownCtx)
+	if err != nil {
+		return err
+	}
+
+	defer cancel()
+
+	return nil
 }

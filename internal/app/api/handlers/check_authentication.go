@@ -2,19 +2,19 @@ package handlers
 
 import (
 	"context"
-	"github.com/northmule/gofermart/internal/app/api/rctx"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/services/authentication"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/api/rctx"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/authentication"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 	"strings"
 )
 
 type CheckAuthenticationHandler struct {
-	manager *repository.Manager
+	manager repository.Repository
 }
 
-func NewCheckAuthenticationHandler(manager *repository.Manager) *CheckAuthenticationHandler {
+func NewCheckAuthenticationHandler(manager repository.Repository) *CheckAuthenticationHandler {
 	instance := &CheckAuthenticationHandler{
 		manager: manager,
 	}
@@ -43,7 +43,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := c.manager.User.FindOneByUUID(userUUID)
+		user, err := c.manager.User().FindOneByUUID(userUUID)
 		if err != nil {
 			logger.LogSugar.Errorf("Ошибка при поиске пользователя по UUID %s, %s", userUUID, err)
 			res.WriteHeader(http.StatusInternalServerError)
@@ -54,6 +54,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 			res.WriteHeader(http.StatusUnauthorized)
 			return
 		}
+		logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
 		ctx := context.WithValue(req.Context(), rctx.UserCtxKey, *user)
 		req = req.WithContext(ctx)

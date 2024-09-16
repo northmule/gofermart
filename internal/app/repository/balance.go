@@ -3,21 +3,24 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"time"
 )
 
 type BalanceRepository struct {
-	store             storage.DBQuery
-	sqlFindByUserUUID *sql.Stmt
+	store                      storage.DBQuery
+	sqlFindByUserUUID          *sql.Stmt
+	sqlCreateBalanceByUserUUID *sql.Stmt
+	ctx                        context.Context
 }
 
-func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
+func NewBalanceRepository(store storage.DBQuery, ctx context.Context) *BalanceRepository {
 	instance := BalanceRepository{
 		store: store,
+		ctx:   ctx,
 	}
 
 	var err error
@@ -31,12 +34,17 @@ func NewBalanceRepository(store storage.DBQuery) *BalanceRepository {
 		logger.LogSugar.Error(err)
 		return nil
 	}
+	instance.sqlCreateBalanceByUserUUID, err = store.Prepare(`insert into user_balance (user_id, value) values ((select u.id from users u where u.uuid = $1 limit 1), 0) returning id;`)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return nil
+	}
 
 	return &instance
 }
 
 func (br *BalanceRepository) FindOneByUserUUID(userUUID string) (*models.Balance, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(br.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := br.sqlFindByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
@@ -59,4 +67,24 @@ func (br *BalanceRepository) FindOneByUserUUID(userUUID string) (*models.Balance
 	}
 	balance.User = user
 	return &balance, nil
+}
+
+func (br *BalanceRepository) CreateBalanceByUserUUID(userUUID string) (int64, error) {
+	ctx, cancel := context.WithTimeout(br.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	defer cancel()
+	rows := br.sqlCreateBalanceByUserUUID.QueryRowContext(ctx, userUUID)
+	err := rows.Err()
+	if err != nil {
+		logger.LogSugar.Errorf("При вызове CreateBalanceByUserUUID(%s) произошла ошибка %s", userUUID, err)
+		return 0, err
+	}
+
+	var id int64
+	err = rows.Scan(&id)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+
+	return id, nil
 }

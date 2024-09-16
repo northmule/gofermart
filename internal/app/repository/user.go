@@ -3,10 +3,10 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"github.com/northmule/gofermart/config"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
-	"github.com/northmule/gofermart/internal/app/storage"
+	"github.com/northmule/gophermart/config"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"time"
 )
 
@@ -15,11 +15,13 @@ type UserRepository struct {
 	sqlFindByLogin *sql.Stmt
 	sqlCreateUser  *sql.Stmt
 	sqlFindByUUID  *sql.Stmt
+	ctx            context.Context
 }
 
-func NewUserRepository(store storage.DBQuery) *UserRepository {
+func NewUserRepository(store storage.DBQuery, ctx context.Context) *UserRepository {
 	instance := UserRepository{
 		store: store,
+		ctx:   ctx,
 	}
 	var err error
 	instance.sqlFindByLogin, err = store.Prepare(`select id, name, login, password, created_at, uuid from users where login = $1 limit 1`)
@@ -45,8 +47,7 @@ func NewUserRepository(store storage.DBQuery) *UserRepository {
 
 func (r *UserRepository) FindOneByLogin(login string) (*models.User, error) {
 	user := models.User{}
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := r.sqlFindByLogin.QueryContext(ctx, login)
 	if err != nil {
@@ -72,8 +73,7 @@ func (r *UserRepository) FindOneByLogin(login string) (*models.User, error) {
 
 func (r *UserRepository) FindOneByUUID(uuid string) (*models.User, error) {
 	user := models.User{}
-
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := r.sqlFindByUUID.QueryContext(ctx, uuid)
 	if err != nil {
@@ -97,8 +97,8 @@ func (r *UserRepository) FindOneByUUID(uuid string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) Save(user models.User) (int64, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), config.DataBaseConnectionTimeOut*time.Second)
+func (r *UserRepository) CreateNewUser(user models.User) (int64, error) {
+	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := r.sqlCreateUser.QueryRowContext(ctx, user.Name, user.Login, user.Password, user.UUID)
 	err := rows.Err()

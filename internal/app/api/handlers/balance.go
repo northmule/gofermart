@@ -2,18 +2,18 @@ package handlers
 
 import (
 	"encoding/json"
-	"github.com/northmule/gofermart/internal/app/api/rctx"
-	"github.com/northmule/gofermart/internal/app/repository"
-	"github.com/northmule/gofermart/internal/app/repository/models"
-	"github.com/northmule/gofermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/api/rctx"
+	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 )
 
 type BalanceHandler struct {
-	manager *repository.Manager
+	manager repository.Repository
 }
 
-func NewBalanceHandler(manager *repository.Manager) *BalanceHandler {
+func NewBalanceHandler(manager repository.Repository) *BalanceHandler {
 	instance := &BalanceHandler{
 		manager: manager,
 	}
@@ -27,15 +27,14 @@ type responseBalance struct {
 
 func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
-	logger.LogSugar.Infof("Поступил запрос %s от пользователя %s", req.URL.Path, user.UUID)
 
-	balance, err := bh.manager.Balance.FindOneByUserUUID(user.UUID)
+	balance, err := bh.manager.Balance().FindOneByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	withdrawn, err := bh.manager.Withdrawn.FindSumWithdrawnByUserUUID(user.UUID)
+	withdrawn, err := bh.manager.Withdrawn().FindSumWithdrawnByUserUUID(user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -52,7 +51,7 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	responseBalanceValue, err := json.Marshal(response)
 	if err != nil {
 		http.Error(res, "Ошибка подготовки ответа", http.StatusInternalServerError)
-		logger.LogSugar.Errorf(err.Error())
+		logger.LogSugar.Error(err.Error())
 		return
 	}
 	res.Header().Set("content-type", "application/json")
@@ -62,4 +61,17 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Ответ не передан", http.StatusInternalServerError)
 		return
 	}
+}
+
+func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
+		_, err := bh.manager.Balance().CreateBalanceByUserUUID(newUser.UUID)
+		if err != nil {
+			logger.LogSugar.Errorf(err.Error())
+			res.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		next.ServeHTTP(res, req)
+	})
 }
