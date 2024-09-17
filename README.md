@@ -55,3 +55,11 @@ go build -o goose ./cmd/goose
 ./goose --version
 # goose version:(devel)
 ```
+
+### Запуск, тестирование
+
+1. Настроить build/package/docker/postgres/.env и собрать build/package/docker/postgres/docker-compose.yml docker
+2. Запустить БД tools/start_docker_postgres.sh
+3. Запустить автотесты tools/run_gophermarttest.sh
+4. Для запуска приложения(без использования автотестов) дополнительно нужно запустить сервис расчёта баллов tools/accrual_start.sh
+5. После этого можно запускать main функцию cmd/gophermart/main.go
