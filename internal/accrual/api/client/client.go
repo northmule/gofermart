@@ -21,19 +21,19 @@ type ErrorUndefined struct {
 }
 
 func (err ErrorNoContent) Error() string {
-	return fmt.Sprintf("Сервис %s вернул пустой ответ", ServiceName)
+	return fmt.Sprintf("сервис %s вернул пустой ответ", ServiceName)
 }
 
 func (err ErrorTooManyRequests) Error() string {
-	return fmt.Sprintf("Сервис %s перегружен запросами", ServiceName)
+	return fmt.Sprintf("сервис %s перегружен запросами", ServiceName)
 }
 
 func (err ErrorInternalServerError) Error() string {
-	return fmt.Sprintf("Сервис %s сломался", ServiceName)
+	return fmt.Sprintf("сервис %s сломался", ServiceName)
 }
 
 func (err ErrorUndefined) Error() string {
-	return fmt.Sprintf("Сервис %s вернул не обработаный код ошибки %d", ServiceName, err.code)
+	return fmt.Sprintf("сервис %s вернул не обработаный код ошибки %d", ServiceName, err.code)
 }
 
 type AccrualClient struct {
@@ -41,17 +41,12 @@ type AccrualClient struct {
 	logger     *logger.Logger
 }
 
-func NewAccrualClient(serviceURL string, logger *logger.Logger) AccrualClientInterface {
+func NewAccrualClient(serviceURL string, logger *logger.Logger) *AccrualClient {
 	instance := &AccrualClient{
 		serviceURL: serviceURL,
 		logger:     logger,
 	}
 	return instance
-}
-
-type AccrualClientInterface interface {
-	SendOrderNumber(ctx context.Context, orderNumber string) (*ResponseAccrual, error)
-	isStatusOk(response *http.Response) (bool, error)
 }
 
 type ResponseAccrual struct {

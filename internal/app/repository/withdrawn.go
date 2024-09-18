@@ -26,7 +26,7 @@ func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 	instance.sqlFindSumWithdrawnByUserUUID, err = store.Prepare(`
 																	select 
 																	sum(w.value) as withdrawn
-																	from withdrawn w 
+																	from withdrawals w 
 																	join users u on u.id = w.user_id 
 																	where u."uuid" = $1
 				`)
@@ -35,7 +35,7 @@ func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 		return nil
 	}
 
-	instance.sqlFindOneByOrderID, err = store.Prepare(`select id, user_id, value, order_id, created_at from withdrawn where order_id = $1`)
+	instance.sqlFindOneByOrderID, err = store.Prepare(`select id, user_id, value, order_id, created_at from withdrawals where order_id = $1`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
@@ -51,7 +51,7 @@ func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 												       o.number,
 												       o.status,
 												       o.created_at												       
-												from withdrawn w
+												from withdrawals w
 												join orders o on o.id = w.order_id
 												where user_id = (select u.id from users u where u.uuid=$1 limit 1)
 												order by w.id desc
@@ -73,7 +73,7 @@ func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userID int, withdra
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
-	rows := tx.QueryRowContext(ctx, `insert into withdrawn (user_id, value, order_id) values ($1, $2, $3) RETURNING id;`, userID, withdraw, orderID)
+	rows := tx.QueryRowContext(ctx, `insert into withdrawals (user_id, value, order_id) values ($1, $2, $3) RETURNING id;`, userID, withdraw, orderID)
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())

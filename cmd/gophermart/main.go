@@ -57,7 +57,6 @@ func run(ctx context.Context) error {
 	}
 	logger.LogSugar.Info("Инициализация менеджера репозитариев")
 	repositoryManager := repository.NewManager(store.DB)
-	routes := api.NewAppRoutes(ctx, repositoryManager)
 
 	logger.LogSugar.Info("Инициализация клиента Accrual")
 	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar)
@@ -65,9 +64,11 @@ func run(ctx context.Context) error {
 	worker := job.NewWorker(repositoryManager, accrualClient)
 	worker.Run(ctx)
 
+	logger.LogSugar.Info("Подготовка сервера к запуску")
+	routes := api.NewAppRoutes(repositoryManager)
 	httpServer := http.Server{
 		Addr:    cfg.ServerURL,
-		Handler: routes,
+		Handler: routes.DefiningAppRoutes(ctx),
 	}
 	go func() {
 		<-ctx.Done()

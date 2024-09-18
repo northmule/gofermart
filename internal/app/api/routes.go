@@ -15,11 +15,11 @@ type AppRoutes struct {
 	manager repository.Repository
 }
 
-func NewAppRoutes(ctx context.Context, repositoryManager repository.Repository) chi.Router {
+func NewAppRoutes(repositoryManager repository.Repository) AppRoutes {
 	instance := AppRoutes{
 		manager: repositoryManager,
 	}
-	return instance.DefiningAppRoutes(ctx)
+	return instance
 }
 
 // DefiningAppRoutes маршруты приложения

@@ -15,11 +15,11 @@ const maxNumberAttempts = 5
 
 type Worker struct {
 	manager        repository.Repository
-	accrualService client.AccrualClientInterface
+	accrualService AccrualClientInterface
 	jobChan        chan job
 }
 
-func NewWorker(manager repository.Repository, accrualService client.AccrualClientInterface) *Worker {
+func NewWorker(manager repository.Repository, accrualService AccrualClientInterface) *Worker {
 	instance := Worker{
 		manager:        manager,
 		accrualService: accrualService,
@@ -27,6 +27,10 @@ func NewWorker(manager repository.Repository, accrualService client.AccrualClien
 	}
 
 	return &instance
+}
+
+type AccrualClientInterface interface {
+	SendOrderNumber(ctx context.Context, orderNumber string) (*client.ResponseAccrual, error)
 }
 
 type job struct {
