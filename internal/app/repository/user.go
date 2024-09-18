@@ -15,13 +15,11 @@ type UserRepository struct {
 	sqlFindByLogin *sql.Stmt
 	sqlCreateUser  *sql.Stmt
 	sqlFindByUUID  *sql.Stmt
-	ctx            context.Context
 }
 
-func NewUserRepository(store storage.DBQuery, ctx context.Context) *UserRepository {
+func NewUserRepository(store storage.DBQuery) *UserRepository {
 	instance := UserRepository{
 		store: store,
-		ctx:   ctx,
 	}
 	var err error
 	instance.sqlFindByLogin, err = store.Prepare(`select id, name, login, password, created_at, uuid from users where login = $1 limit 1`)
@@ -45,9 +43,9 @@ func NewUserRepository(store storage.DBQuery, ctx context.Context) *UserReposito
 	return &instance
 }
 
-func (r *UserRepository) FindOneByLogin(login string) (*models.User, error) {
+func (r *UserRepository) FindOneByLogin(ctx context.Context, login string) (*models.User, error) {
 	user := models.User{}
-	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := r.sqlFindByLogin.QueryContext(ctx, login)
 	if err != nil {
@@ -71,9 +69,9 @@ func (r *UserRepository) FindOneByLogin(login string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) FindOneByUUID(uuid string) (*models.User, error) {
+func (r *UserRepository) FindOneByUUID(ctx context.Context, uuid string) (*models.User, error) {
 	user := models.User{}
-	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := r.sqlFindByUUID.QueryContext(ctx, uuid)
 	if err != nil {
@@ -97,8 +95,8 @@ func (r *UserRepository) FindOneByUUID(uuid string) (*models.User, error) {
 	return &user, nil
 }
 
-func (r *UserRepository) CreateNewUser(user models.User) (int64, error) {
-	ctx, cancel := context.WithTimeout(r.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (r *UserRepository) CreateNewUser(ctx context.Context, user models.User) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := r.sqlCreateUser.QueryRowContext(ctx, user.Name, user.Login, user.Password, user.UUID)
 	err := rows.Err()

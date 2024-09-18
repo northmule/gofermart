@@ -17,13 +17,11 @@ type JobRepository struct {
 	sqlCreateJobByOrderNumber *sql.Stmt
 	sqlUpdateJobByOrderNumber *sql.Stmt
 	sqlDeleteJobByOrderNumber *sql.Stmt
-	ctx                       context.Context
 }
 
-func NewJobRepository(store storage.DBQuery, ctx context.Context) *JobRepository {
+func NewJobRepository(store storage.DBQuery) *JobRepository {
 	instance := JobRepository{
 		store: store,
-		ctx:   ctx,
 	}
 	var err error
 
@@ -54,8 +52,8 @@ func NewJobRepository(store storage.DBQuery, ctx context.Context) *JobRepository
 	return &instance
 }
 
-func (jr *JobRepository) GetJobForRun() (*[]models.Job, error) {
-	ctx, cancel := context.WithTimeout(jr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (jr *JobRepository) GetJobForRun(ctx context.Context) (*[]models.Job, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 
 	tx, err := jr.store.Begin()
@@ -111,8 +109,8 @@ func (jr *JobRepository) GetJobForRun() (*[]models.Job, error) {
 	return &jobs, nil
 }
 
-func (jr *JobRepository) CreateJobByOrderNumber(orderNumber string) (int64, error) {
-	ctx, cancel := context.WithTimeout(jr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (jr *JobRepository) CreateJobByOrderNumber(ctx context.Context, orderNumber string) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := jr.sqlCreateJobByOrderNumber.QueryRowContext(ctx, orderNumber)
 
@@ -132,8 +130,8 @@ func (jr *JobRepository) CreateJobByOrderNumber(orderNumber string) (int64, erro
 	return id, nil
 }
 
-func (jr *JobRepository) UpdateJobByOrderNumber(orderNumber string) error {
-	ctx, cancel := context.WithTimeout(jr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (jr *JobRepository) UpdateJobByOrderNumber(ctx context.Context, orderNumber string) error {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := jr.sqlUpdateJobByOrderNumber.QueryContext(ctx, orderNumber)
 	if err != nil {
@@ -149,8 +147,8 @@ func (jr *JobRepository) UpdateJobByOrderNumber(orderNumber string) error {
 	return nil
 }
 
-func (jr *JobRepository) DeleteJobByOrderNumber(orderNumber string) error {
-	ctx, cancel := context.WithTimeout(jr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (jr *JobRepository) DeleteJobByOrderNumber(ctx context.Context, orderNumber string) error {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := jr.sqlDeleteJobByOrderNumber.QueryContext(ctx, orderNumber)
 	if err != nil {

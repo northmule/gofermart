@@ -13,13 +13,11 @@ import (
 type AccrualRepository struct {
 	store                     storage.DBQuery
 	sqlCreateAccrualZeroValue *sql.Stmt
-	ctx                       context.Context
 }
 
-func NewAccrualRepository(store storage.DBQuery, ctx context.Context) *AccrualRepository {
+func NewAccrualRepository(store storage.DBQuery) *AccrualRepository {
 	instance := AccrualRepository{
 		store: store,
-		ctx:   ctx,
 	}
 	var err error
 
@@ -32,8 +30,8 @@ func NewAccrualRepository(store storage.DBQuery, ctx context.Context) *AccrualRe
 	return &instance
 }
 
-func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(orderNumber string, userUUID string) (int64, error) {
-	ctx, cancel := context.WithTimeout(ar.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(ctx context.Context, orderNumber string, userUUID string) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := ar.sqlCreateAccrualZeroValue.QueryRowContext(ctx, orderNumber, userUUID)
 	err := rows.Err()
@@ -51,8 +49,8 @@ func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(orderNumber s
 	return id, nil
 }
 
-func (ar *AccrualRepository) UpdateTxByOrderNumber(orderNumber string, orderStatus string, accrual float64) error {
-	ctx, cancel := context.WithTimeout(ar.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (ar *AccrualRepository) UpdateTxByOrderNumber(ctx context.Context, orderNumber string, orderStatus string, accrual float64) error {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := ar.store.Begin()
 	if err != nil {

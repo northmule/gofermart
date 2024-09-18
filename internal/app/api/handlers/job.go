@@ -22,7 +22,7 @@ func NewJobHandler(manager repository.Repository) *JobHandler {
 func (jh *JobHandler) CreateTaskToProcessNewOrder(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newOrder := req.Context().Value(rctx.OrderUpload).(models.Order)
-		_, err := jh.manager.Job().CreateJobByOrderNumber(newOrder.Number)
+		_, err := jh.manager.Job().CreateJobByOrderNumber(req.Context(), newOrder.Number)
 
 		if err != nil {
 			logger.LogSugar.Errorf("Ошибка создания задания на обработку заказа с номером %s", newOrder.Number)

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
@@ -23,7 +22,7 @@ func (u *UserRepositoryTestSuite) SetupTest() {
 	u.mock.ExpectPrepare("select")
 	u.mock.ExpectPrepare("insert")
 	u.mock.ExpectPrepare("select")
-	u.repository = NewUserRepository(u.DB, context.Background())
+	u.repository = NewUserRepository(u.DB)
 	require.NoError(u.T(), err)
 }
 

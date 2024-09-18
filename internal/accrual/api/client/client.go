@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"go.uber.org/zap"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"io"
 	"net/http"
 	"strings"
@@ -38,21 +38,19 @@ func (err ErrorUndefined) Error() string {
 
 type AccrualClient struct {
 	serviceURL string
-	logger     *zap.SugaredLogger
-	ctx        context.Context
+	logger     *logger.Logger
 }
 
-func NewAccrualClient(serviceURL string, logger *zap.SugaredLogger, ctx context.Context) AccrualClientInterface {
+func NewAccrualClient(serviceURL string, logger *logger.Logger) AccrualClientInterface {
 	instance := &AccrualClient{
 		serviceURL: serviceURL,
 		logger:     logger,
-		ctx:        ctx,
 	}
 	return instance
 }
 
 type AccrualClientInterface interface {
-	SendOrderNumber(orderNumber string) (*ResponseAccrual, error)
+	SendOrderNumber(ctx context.Context, orderNumber string) (*ResponseAccrual, error)
 	isStatusOk(response *http.Response) (bool, error)
 }
 
@@ -62,14 +60,14 @@ type ResponseAccrual struct {
 	Accrual float64 `json:"accrual"`
 }
 
-func (ac *AccrualClient) SendOrderNumber(orderNumber string) (*ResponseAccrual, error) {
+func (ac *AccrualClient) SendOrderNumber(ctx context.Context, orderNumber string) (*ResponseAccrual, error) {
 
 	requestURL := fmt.Sprintf(
 		"%s%s", strings.TrimRight(ac.serviceURL, "/"),
 		strings.Replace(ServiceAccrualURI, "{number}", orderNumber, 1),
 	)
 	ac.logger.Infof("Поступил запрос: %s на полученине информации от сервиса %s", requestURL, ServiceName)
-	requestPrepare, err := http.NewRequestWithContext(ac.ctx, http.MethodGet, requestURL, nil)
+	requestPrepare, err := http.NewRequestWithContext(ctx, http.MethodGet, requestURL, nil)
 	if err != nil {
 		return nil, err
 	}

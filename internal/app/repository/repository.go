@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"github.com/northmule/gophermart/internal/app/storage"
 )
 
@@ -14,14 +13,14 @@ type Manager struct {
 	job       *JobRepository
 }
 
-func NewManager(db storage.DBQuery, ctx context.Context) Repository {
+func NewManager(db storage.DBQuery) Repository {
 	instance := &Manager{
-		user:      NewUserRepository(db, ctx),
-		accrual:   NewAccrualRepository(db, ctx),
-		order:     NewOrderRepository(db, ctx),
-		job:       NewJobRepository(db, ctx),
-		balance:   NewBalanceRepository(db, ctx),
-		withdrawn: NewWithdrawnRepository(db, ctx),
+		user:      NewUserRepository(db),
+		accrual:   NewAccrualRepository(db),
+		order:     NewOrderRepository(db),
+		job:       NewJobRepository(db),
+		balance:   NewBalanceRepository(db),
+		withdrawn: NewWithdrawnRepository(db),
 	}
 
 	return instance

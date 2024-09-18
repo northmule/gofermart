@@ -2,8 +2,8 @@ package config
 
 import (
 	"flag"
+	"fmt"
 	"github.com/caarlos0/env"
-	"github.com/northmule/gophermart/internal/app/services/logger"
 	"os"
 	"strings"
 )
@@ -12,6 +12,7 @@ const DataBaseConnectionTimeOut = 10000
 const serverURLDefault = ":8081"
 const databaseURIDefault = "postgres://postgres:123@localhost:5456/gofermart?sslmode=disable"
 const accrualURLDefault = "http://localhost:8091"
+const logLevelDefault = "info"
 
 type GophermartConfig struct {
 	// Адрес сервера и порт
@@ -20,16 +21,22 @@ type GophermartConfig struct {
 	AccrualURL string `env:"ACCRUAL_SYSTEM_ADDRESS"`
 	// Строка подключения к БД
 	DatabaseURI string `env:"DATABASE_URI"`
+	// Уроверь логирования
+	LogLevel string `env:"LOG_LEVEL"`
 }
 
 func NewGophermartConfig() (*GophermartConfig, error) {
 	instance := &GophermartConfig{}
-	err := instance.env()
-	if err != nil {
+	var err error
+	if err = instance.env(); err != nil {
 		return nil, err
 	}
 
-	return instance, instance.flag()
+	if err = instance.flag(); err != nil {
+		return nil, err
+	}
+
+	return instance, nil
 }
 
 func (c *GophermartConfig) env() error {
@@ -45,11 +52,11 @@ func (c *GophermartConfig) flag() error {
 	serverURL := cf.String("a", serverURLDefault, "адрес и порт запуска сервиса")
 	databaseURI := cf.String("d", databaseURIDefault, "адрес подключения к базе данных")
 	accrualURL := cf.String("r", accrualURLDefault, "адрес системы расчёта начислений")
+	logLevel := cf.String("l", logLevelDefault, "уровень логирования")
 
 	err := cf.Parse(os.Args[1:])
 	if err != nil {
-		logger.LogSugar.Errorf("флаги конфигурации не разобраны: %s", err)
-		return err
+		return fmt.Errorf("флаги конфигурации не разобраны: %w", err)
 	}
 
 	flagsSet := make(map[string]bool)
@@ -66,6 +73,9 @@ func (c *GophermartConfig) flag() error {
 	if _, ok = flagsSet["r"]; ok {
 		c.AccrualURL = *accrualURL
 	}
+	if _, ok = flagsSet["l"]; ok {
+		c.LogLevel = *logLevel
+	}
 	// Установка по умолчанию при отсутвии переданных значений
 	if c.ServerURL == "" {
 		c.ServerURL = *serverURL
@@ -75,6 +85,9 @@ func (c *GophermartConfig) flag() error {
 	}
 	if c.AccrualURL == "" {
 		c.AccrualURL = *accrualURL
+	}
+	if c.LogLevel == "" {
+		c.LogLevel = *logLevel
 	}
 
 	c.ServerURL = strings.ReplaceAll(c.ServerURL, "\"", "")

@@ -4,15 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 	"net/http/httptest"
 	"testing"
-
-	"go.uber.org/zap"
 )
 
 func TestAccrualClient_SendOrderNumber(t *testing.T) {
-	logger, _ := zap.NewDevelopment()
+	_, _ = logger.NewLogger("info")
 	ctx := context.Background()
 
 	t.Run("Положительный_ответ", func(t *testing.T) {
@@ -25,9 +24,9 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 			json.NewEncoder(w).Encode(response)
 		}))
 		defer ts.Close()
-		client := NewAccrualClient(ts.URL, logger.Sugar(), ctx)
+		client := NewAccrualClient(ts.URL, logger.LogSugar)
 
-		response, err := client.SendOrderNumber("12345")
+		response, err := client.SendOrderNumber(ctx, "12345")
 		if err != nil {
 			t.Errorf("Unexpected error: %v", err)
 		}
@@ -46,10 +45,10 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 			w.WriteHeader(http.StatusInternalServerError)
 		}))
 		defer ts.Close()
-		client := NewAccrualClient(ts.URL, logger.Sugar(), ctx)
+		client := NewAccrualClient(ts.URL, logger.LogSugar)
 
 		var expectedError ErrorInternalServerError
-		_, err := client.SendOrderNumber("12345")
+		_, err := client.SendOrderNumber(ctx, "12345")
 		if err == nil || errors.Is(err, expectedError) {
 			t.Errorf("Expected error %s, got %v", expectedError, err)
 		}
@@ -60,10 +59,10 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 			w.WriteHeader(http.StatusTooManyRequests)
 		}))
 		defer ts.Close()
-		client := NewAccrualClient(ts.URL, logger.Sugar(), ctx)
+		client := NewAccrualClient(ts.URL, logger.LogSugar)
 
 		var expectedError ErrorTooManyRequests
-		_, err := client.SendOrderNumber("12345")
+		_, err := client.SendOrderNumber(ctx, "12345")
 		if err == nil || errors.Is(err, expectedError) {
 			t.Errorf("Expected error %s, got %v", expectedError, err)
 		}
@@ -74,10 +73,10 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 			w.WriteHeader(http.StatusNoContent)
 		}))
 		defer ts.Close()
-		client := NewAccrualClient(ts.URL, logger.Sugar(), ctx)
+		client := NewAccrualClient(ts.URL, logger.LogSugar)
 
 		var expectedError ErrorNoContent
-		_, err := client.SendOrderNumber("12345")
+		_, err := client.SendOrderNumber(ctx, "12345")
 		if err == nil || errors.Is(err, expectedError) {
 			t.Errorf("Expected error %s, got %v", expectedError, err)
 		}

@@ -28,13 +28,13 @@ type responseBalance struct {
 func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 
-	balance, err := bh.manager.Balance().FindOneByUserUUID(user.UUID)
+	balance, err := bh.manager.Balance().FindOneByUserUUID(req.Context(), user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	withdrawn, err := bh.manager.Withdrawn().FindSumWithdrawnByUserUUID(user.UUID)
+	withdrawn, err := bh.manager.Withdrawn().FindSumWithdrawnByUserUUID(req.Context(), user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -66,7 +66,7 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
-		_, err := bh.manager.Balance().CreateBalanceByUserUUID(newUser.UUID)
+		_, err := bh.manager.Balance().CreateBalanceByUserUUID(req.Context(), newUser.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)

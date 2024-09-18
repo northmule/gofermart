@@ -60,7 +60,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	userBalance, err := wh.manager.Balance().FindOneByUserUUID(user.UUID)
+	userBalance, err := wh.manager.Balance().FindOneByUserUUID(req.Context(), user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -78,7 +78,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	}
 
 	//order, err := wh.manager.Order.FindOneByNumber(request.Order)
-	order, err := wh.manager.Order().FindByNumberOrCreate(request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
+	order, err := wh.manager.Order().FindByNumberOrCreate(req.Context(), request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -89,7 +89,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	existWithdraw, err := wh.manager.Withdrawn().FindOneByOrderID(order.ID)
+	existWithdraw, err := wh.manager.Withdrawn().FindOneByOrderID(req.Context(), order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -100,7 +100,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	_, err = wh.manager.Withdrawn().Withdraw(user.ID, request.Sum, order.ID)
+	_, err = wh.manager.Withdrawn().Withdraw(req.Context(), user.ID, request.Sum, order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -114,7 +114,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 
-	withdraws, err := wh.manager.Withdrawn().FindWithdrawsByUserUUID(user.UUID)
+	withdraws, err := wh.manager.Withdrawn().FindWithdrawsByUserUUID(req.Context(), user.UUID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)

@@ -16,13 +16,11 @@ type WithdrawnRepository struct {
 	sqlFindSumWithdrawnByUserUUID *sql.Stmt
 	sqlFindOneByOrderID           *sql.Stmt
 	sqlFindWithdrawsByUserUUID    *sql.Stmt
-	ctx                           context.Context
 }
 
-func NewWithdrawnRepository(store storage.DBQuery, ctx context.Context) *WithdrawnRepository {
+func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 	instance := WithdrawnRepository{
 		store: store,
-		ctx:   ctx,
 	}
 	var err error
 	instance.sqlFindSumWithdrawnByUserUUID, err = store.Prepare(`
@@ -67,8 +65,8 @@ func NewWithdrawnRepository(store storage.DBQuery, ctx context.Context) *Withdra
 }
 
 // Withdraw списание с обновлением баланса пользователя
-func (wr *WithdrawnRepository) Withdraw(userID int, withdraw float64, orderID int) (int64, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userID int, withdraw float64, orderID int) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := wr.store.Begin()
 	if err != nil {
@@ -106,8 +104,8 @@ func (wr *WithdrawnRepository) Withdraw(userID int, withdraw float64, orderID in
 	return withdrawID, nil
 }
 
-func (wr *WithdrawnRepository) FindOneByOrderID(orderID int) (*models.Withdrawn, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (wr *WithdrawnRepository) FindOneByOrderID(ctx context.Context, orderID int) (*models.Withdrawn, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindOneByOrderID.QueryContext(ctx, orderID)
 	if err != nil {
@@ -130,8 +128,8 @@ func (wr *WithdrawnRepository) FindOneByOrderID(orderID int) (*models.Withdrawn,
 	return &withdraw, nil
 }
 
-func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(userUUID string) (float64, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(ctx context.Context, userUUID string) (float64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindSumWithdrawnByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
@@ -154,8 +152,8 @@ func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(userUUID string) (floa
 	return sum.Float64, nil
 }
 
-func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(userUUID string) (*[]models.Withdrawn, error) {
-	ctx, cancel := context.WithTimeout(wr.ctx, config.DataBaseConnectionTimeOut*time.Second)
+func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, userUUID string) (*[]models.Withdrawn, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindWithdrawsByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {

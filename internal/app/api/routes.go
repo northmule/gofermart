@@ -13,21 +13,17 @@ import (
 
 type AppRoutes struct {
 	manager repository.Repository
-	ctx     context.Context
-	logger  *logger.Logger
 }
 
-func NewAppRoutes(repositoryManager repository.Repository, ctx context.Context, logger *logger.Logger) chi.Router {
+func NewAppRoutes(ctx context.Context, repositoryManager repository.Repository) chi.Router {
 	instance := AppRoutes{
 		manager: repositoryManager,
-		ctx:     ctx,
-		logger:  logger,
 	}
-	return instance.DefiningAppRoutes()
+	return instance.DefiningAppRoutes(ctx)
 }
 
 // DefiningAppRoutes маршруты приложения
-func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
+func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 
 	// Обработчики
 	finalizeHandler := handlers.NewFinalizeHandler()
@@ -43,14 +39,14 @@ func (ar *AppRoutes) DefiningAppRoutes() chi.Router {
 	contextMiddleware := func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 			// Проброс контекста приложения
-			requestWithAppContext := req.Clone(ar.ctx)
+			requestWithAppContext := req.Clone(ctx)
 			next.ServeHTTP(res, requestWithAppContext)
 		})
 	}
 	r := chi.NewRouter()
 
 	// Общие мидлвары
-	r.Use(middleware.RequestLogger(ar.logger))
+	r.Use(middleware.RequestLogger(logger.LogSugar))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))

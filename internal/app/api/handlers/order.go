@@ -58,7 +58,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 		user := req.Context().Value(rctx.UserCtxKey).(models.User)
 		logger.LogSugar.Infof("Получен номер заказа %s, от пользователя %s", orderNumber, user.Login)
 
-		order, err := o.manager.Order().FindOneByNumber(orderNumber)
+		order, err := o.manager.Order().FindOneByNumber(req.Context(), orderNumber)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)
@@ -85,7 +85,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			Status: constants.OrderStatusNew,
 			User:   user,
 		}
-		orderID, err := o.manager.Order().Save(newOrder, newOrder.User.ID)
+		orderID, err := o.manager.Order().Save(req.Context(), newOrder, newOrder.User.ID)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)
@@ -108,7 +108,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 	user := req.Context().Value(rctx.UserCtxKey).(models.User)
 
-	orders, err := o.manager.Order().FindOrdersByUserUUID(user.UUID)
+	orders, err := o.manager.Order().FindOrdersByUserUUID(req.Context(), user.UUID)
 	if err != nil {
 		logger.LogSugar.Errorf(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)

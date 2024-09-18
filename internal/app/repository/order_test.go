@@ -25,7 +25,7 @@ func (o *OrderRepositoryTestSuite) SetupTest() {
 	o.mock.ExpectPrepare("insert")
 	o.mock.ExpectPrepare("insert")
 	o.mock.ExpectPrepare("select")
-	o.repository = NewOrderRepository(o.DB, context.Background())
+	o.repository = NewOrderRepository(o.DB)
 	require.NoError(o.T(), err)
 }
 
@@ -39,7 +39,7 @@ func (o *OrderRepositoryTestSuite) FindOneByNumber() {
 		WillReturnRows(sqlmock.NewRows([]string{"o.id", "o.number", "o.status", "o.created_at", "o.deleted_at", "u.id", "u.name", "u.login", "u.password", "u.created_at", "u.uuid"}).
 			AddRow("12", "1002", "OK", time.Now(), time.Now(), time.Now(), "14", "userName", "login", "pwd", time.Now(), "uuid"))
 
-	order, err := o.repository.FindOneByNumber(orderNumber)
+	order, err := o.repository.FindOneByNumber(context.Background(), orderNumber)
 	require.NoError(o.T(), err)
 	require.Equal(o.T(), "1002", order.Number)
 	require.Equal(o.T(), "OK", order.Status)

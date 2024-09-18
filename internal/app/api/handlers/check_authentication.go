@@ -43,7 +43,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 			return
 		}
 
-		user, err := c.manager.User().FindOneByUUID(userUUID)
+		user, err := c.manager.User().FindOneByUUID(req.Context(), userUUID)
 		if err != nil {
 			logger.LogSugar.Errorf("Ошибка при поиске пользователя по UUID %s, %s", userUUID, err)
 			res.WriteHeader(http.StatusInternalServerError)

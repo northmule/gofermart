@@ -23,7 +23,7 @@ func (s *BalanceRepositoryTestSuite) SetupTest() {
 
 	s.mock.ExpectPrepare("select")
 	s.mock.ExpectPrepare("insert")
-	s.repository = NewBalanceRepository(s.DB, context.Background())
+	s.repository = NewBalanceRepository(s.DB)
 	require.NoError(s.T(), err)
 }
 func TestBalanceRepositoryTestSuite(t *testing.T) {
@@ -36,7 +36,7 @@ func (s *BalanceRepositoryTestSuite) TestFindOneByUserUUID() {
 	s.mock.ExpectQuery("select").
 		WithArgs(userUUID).WillReturnRows(sqlmock.NewRows([]string{"b.id", "b.value", "b.updated_at", "u.id", "u.name", "u.login", " u.password", "u.created_at", "u.uuid"}).
 		AddRow("1", "10", time.Now(), "2", "name", "login", "pwd", time.Now(), "uuid"))
-	balance, err := s.repository.FindOneByUserUUID(userUUID)
+	balance, err := s.repository.FindOneByUserUUID(context.Background(), userUUID)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), 1, balance.ID)
 	require.Equal(s.T(), float64(10), balance.Value)
@@ -51,7 +51,7 @@ func (s *BalanceRepositoryTestSuite) TestCreateBalanceByUserUUID() {
 	s.mock.ExpectQuery("insert into").
 		WithArgs(userUUID).WillReturnRows(sqlmock.NewRows([]string{"id"}).
 		AddRow("1"))
-	id, err := s.repository.CreateBalanceByUserUUID(userUUID)
+	id, err := s.repository.CreateBalanceByUserUUID(context.Background(), userUUID)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), int64(1), id)
 }

@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"context"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
@@ -23,7 +22,7 @@ func (w *WithdrawnRepositoryTestSuite) SetupTest() {
 	w.mock.ExpectPrepare("select")
 	w.mock.ExpectPrepare("select")
 	w.mock.ExpectPrepare("select")
-	w.repository = NewWithdrawnRepository(w.DB, context.Background())
+	w.repository = NewWithdrawnRepository(w.DB)
 	require.NoError(w.T(), err)
 }
 

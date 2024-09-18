@@ -23,7 +23,7 @@ func (suite *AccrualRepositoryTestSuite) SetupTest() {
 
 func (suite *AccrualRepositoryTestSuite) TestCreateAccrualByOrderNumberAndUserUUID() {
 	suite.mock.ExpectPrepare("insert")
-	ar := NewAccrualRepository(suite.DB, context.Background())
+	ar := NewAccrualRepository(suite.DB)
 
 	orderNumber := "12345"
 	userUUID := "uuid123"
@@ -33,7 +33,7 @@ func (suite *AccrualRepositoryTestSuite) TestCreateAccrualByOrderNumberAndUserUU
 		WithArgs(orderNumber, userUUID).
 		WillReturnRows(sqlmock.NewRows([]string{"id"}).AddRow(expectedID))
 
-	id, err := ar.CreateAccrualByOrderNumberAndUserUUID(orderNumber, userUUID)
+	id, err := ar.CreateAccrualByOrderNumberAndUserUUID(context.Background(), orderNumber, userUUID)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), expectedID, id)
 
@@ -43,7 +43,7 @@ func (suite *AccrualRepositoryTestSuite) TestCreateAccrualByOrderNumberAndUserUU
 
 func (suite *AccrualRepositoryTestSuite) TestUpdateTxByOrderNumber() {
 	suite.mock.ExpectPrepare("insert")
-	ar := NewAccrualRepository(suite.DB, context.Background())
+	ar := NewAccrualRepository(suite.DB)
 
 	orderNumber := "12345"
 	orderStatus := "ok"
@@ -64,7 +64,7 @@ func (suite *AccrualRepositoryTestSuite) TestUpdateTxByOrderNumber() {
 
 	suite.mock.ExpectCommit()
 
-	err := ar.UpdateTxByOrderNumber(orderNumber, orderStatus, accrual)
+	err := ar.UpdateTxByOrderNumber(context.Background(), orderNumber, orderStatus, accrual)
 	require.NoError(suite.T(), err)
 
 	err = suite.mock.ExpectationsWereMet()

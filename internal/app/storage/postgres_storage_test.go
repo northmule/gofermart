@@ -27,7 +27,7 @@ func (s *PostgresStorageTestSuite) SetupTest() {
 	s.db, s.mock, err = sqlmock.New()
 	s.Require().NoError(err)
 
-	instance, _ := NewPostgresStorage(s.dsn, s.ctx)
+	instance, _ := NewPostgresStorage(s.dsn)
 	instance.DB = s.db
 	s.storage = instance
 }
@@ -38,7 +38,7 @@ func (s *PostgresStorageTestSuite) TearDownTest() {
 
 func (s *PostgresStorageTestSuite) TestPing() {
 	s.mock.ExpectPing()
-	err := s.storage.Ping()
+	err := s.storage.Ping(s.ctx)
 	s.Require().NoError(err)
 }
 
@@ -54,7 +54,7 @@ func (s *PostgresStorageTestSuite) TestTxQueryRowContext() {
 	s.mock.ExpectBegin()
 	s.storage.TxOpen()
 	s.mock.ExpectQuery(query).WillReturnRows(rows)
-	_, err := s.storage.TxQueryRowContext(query)
+	_, err := s.storage.TxQueryRowContext(s.ctx, query)
 	s.Require().NoError(err)
 }
 
