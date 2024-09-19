@@ -44,10 +44,10 @@ func (j *JobRepositoryTestSuite) TestGetJobForRun() {
 	jobs, err := j.repository.GetJobForRun(context.Background())
 	require.NoError(j.T(), err)
 
-	if len(*jobs) != 1 {
+	if len(jobs) != 1 {
 		j.T().Error("expected 1 job")
 	}
-	job := (*jobs)[0]
+	job := (jobs)[0]
 	require.NotNil(j.T(), job)
 	require.Equal(j.T(), "101", job.OrderNumber)
 }

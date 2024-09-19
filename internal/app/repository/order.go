@@ -26,7 +26,7 @@ func NewOrderRepository(store storage.DBQuery) *OrderRepository {
 
 	var err error
 	instance.sqlFindByNumber, err = store.Prepare(`select o.id, o.number, o.status, o.created_at, o.deleted_at,
-       													u.id, u.name, u.login, u.password, u.created_at, u.uuid
+       													u.id, u.login, u.password, u.created_at, u.uuid
 															from orders as o
                                                   join user_orders uo on uo.order_id = o.id
                                                   join users u on u.id = uo.user_id
@@ -41,25 +41,13 @@ func NewOrderRepository(store storage.DBQuery) *OrderRepository {
 		logger.LogSugar.Error(err)
 		return nil
 	}
-	instance.sqlLinkOrderToUser, err = store.Prepare(`insert into user_orders (user_id, order_id) values ($1, $2) RETURNING id;`)
+	instance.sqlLinkOrderToUser, err = store.Prepare(`insert into user_orders (user_id, order_id) values ((select id from users where uuid=$1 limit 1), $2) RETURNING id;`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
 	}
-	instance.sqlFindOrdersByUserUUID, err = store.Prepare(`select 
-																	o.id, 
-																	o."number", 
-																	o.status, 
-																	o.created_at, 
-																	o.deleted_at,
-																	sum(a.value) as accrual
-																	from orders o 
-																	join user_orders uo on uo.order_id = o.id 
-																	join users u on u.id = uo.user_id 
-																	left join accruals a on a.order_id = o.id 
-																	where u."uuid" = $1
-																	group by o.id
-																	order by o.id desc`,
+	instance.sqlFindOrdersByUserUUID, err = store.Prepare(`select o.id, o."number", o.status, o.created_at, o.deleted_at, sum(a.value) as accrual from orders o 
+																	join user_orders uo on uo.order_id = o.id join users u on u.id = uo.user_id left join accruals a on a.order_id = o.id where u."uuid" = $1 group by o.id order by o.id desc`,
 	)
 	if err != nil {
 		logger.LogSugar.Error(err)
@@ -87,18 +75,18 @@ func (o *OrderRepository) FindOneByNumber(ctx context.Context, number string) (*
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &user.ID, &user.Name, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err := rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf("При обработке значений в FindOneByNumber(%s) произошла ошибка %s", number, err)
 			return nil, err
 		}
 	}
-	order.User = user
+	order.User = &user
 
 	return &order, nil
 }
 
-func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber string, userID int) (*models.Order, error) {
+func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber string, userUUID string) (*models.Order, error) {
 	order := models.Order{
 		Number: orderNumber,
 		Status: constants.OrderStatusNew,
@@ -109,7 +97,7 @@ func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber 
 		return nil, err
 	}
 	if currentOrder == nil || currentOrder.ID == 0 {
-		orderID, err := o.Save(ctx, order, userID)
+		orderID, err := o.Save(ctx, order, userUUID)
 		if err != nil {
 			logger.LogSugar.Error(err)
 			return nil, err
@@ -120,7 +108,7 @@ func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber 
 	return &order, nil
 }
 
-func (o *OrderRepository) Save(ctx context.Context, order models.Order, userID int) (int64, error) {
+func (o *OrderRepository) Save(ctx context.Context, order models.Order, userUUID string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows := o.sqlCreateOrder.QueryRowContext(ctx, order.Number, order.Status)
@@ -136,7 +124,7 @@ func (o *OrderRepository) Save(ctx context.Context, order models.Order, userID i
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
-	rows = o.sqlLinkOrderToUser.QueryRowContext(ctx, userID, orderID)
+	rows = o.sqlLinkOrderToUser.QueryRowContext(ctx, userUUID, orderID)
 	err = rows.Err()
 	if err != nil {
 		logger.LogSugar.Error(err)
@@ -146,7 +134,7 @@ func (o *OrderRepository) Save(ctx context.Context, order models.Order, userID i
 	return orderID, nil
 }
 
-func (o *OrderRepository) FindOrdersByUserUUID(ctx context.Context, userUUID string) (*[]models.Order, error) {
+func (o *OrderRepository) FindOrdersByUserUUID(ctx context.Context, userUUID string) ([]models.Order, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := o.sqlFindOrdersByUserUUID.QueryContext(ctx, userUUID)
@@ -170,5 +158,5 @@ func (o *OrderRepository) FindOrdersByUserUUID(ctx context.Context, userUUID str
 		orders = append(orders, order)
 	}
 
-	return &orders, nil
+	return orders, nil
 }

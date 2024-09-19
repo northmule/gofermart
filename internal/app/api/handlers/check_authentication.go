@@ -37,7 +37,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 		token := cookieValues[0]
 		userUUID := cookieValues[1]
 		logger.LogSugar.Infof("Проверка UUID %s из значений cookie", userUUID)
-		if !authentication.ValidateToken(userUUID, token, authentication.HMACSecretKey) {
+		if valid := authentication.ValidateToken(userUUID, token, authentication.HMACSecretKey); !valid {
 			logger.LogSugar.Infof("Значение UUID %s из cookie не прошло проверку подписи", userUUID)
 			res.WriteHeader(http.StatusUnauthorized)
 			return
@@ -49,7 +49,7 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if user == nil || user.ID == 0 {
+		if user == nil || user.UUID == "" {
 			logger.LogSugar.Infof("Пользователь с uuid %s не найден", userUUID)
 			res.WriteHeader(http.StatusUnauthorized)
 			return

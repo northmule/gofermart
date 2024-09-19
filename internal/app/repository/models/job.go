@@ -1,12 +1,15 @@
 package models
 
-import "database/sql"
+import (
+	"database/sql"
+	"time"
+)
 
 type Job struct {
-	ID          int          `json:"id,omitempty"`
-	OrderNumber string       `json:"order_number,omitempty"`
-	NextRun     sql.NullTime `json:"next_run,omitempty"`
-	RunCnt      int          `json:"run_cnt,omitempty"`
-	CreatedAt   sql.NullTime `json:"created_at,omitempty"`
-	UpdatedAt   sql.NullTime `json:"updated_at,omitempty"`
+	ID          int          `json:"id"`
+	OrderNumber string       `json:"order_number"`
+	NextRun     sql.NullTime `json:"next_run"`
+	RunCnt      int          `json:"run_cnt"`
+	CreatedAt   time.Time    `json:"created_at"`
+	UpdatedAt   sql.NullTime `json:"updated_at"`
 }

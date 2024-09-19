@@ -6,6 +6,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -30,13 +31,13 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 
 	balance, err := bh.manager.Balance().FindOneByUserUUID(req.Context(), user.UUID)
 	if err != nil {
-		logger.LogSugar.Errorf(err.Error())
+		logger.LogSugar.Error(err)
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 	withdrawn, err := bh.manager.Withdrawn().FindSumWithdrawnByUserUUID(req.Context(), user.UUID)
 	if err != nil {
-		logger.LogSugar.Errorf(err.Error())
+		logger.LogSugar.Error(err)
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -51,7 +52,7 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	responseBalanceValue, err := json.Marshal(response)
 	if err != nil {
 		http.Error(res, "Ошибка подготовки ответа", http.StatusInternalServerError)
-		logger.LogSugar.Error(err.Error())
+		logger.LogSugar.Error("марщаллинг ответа", zap.Error(err))
 		return
 	}
 	res.Header().Set("content-type", "application/json")
@@ -68,7 +69,7 @@ func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
 		_, err := bh.manager.Balance().CreateBalanceByUserUUID(req.Context(), newUser.UUID)
 		if err != nil {
-			logger.LogSugar.Errorf(err.Error())
+			logger.LogSugar.Error(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}

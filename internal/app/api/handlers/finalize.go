@@ -25,7 +25,7 @@ func (handler *FinalizeHandler) FinalizeOk(res http.ResponseWriter, req *http.Re
 	responseValue, err := json.Marshal(response)
 	if err != nil {
 		http.Error(res, "Ошибка подготовки ответа", http.StatusInternalServerError)
-		logger.LogSugar.Errorf(err.Error())
+		logger.LogSugar.Error(err)
 		return
 	}
 	res.Header().Set("content-type", "application/json")

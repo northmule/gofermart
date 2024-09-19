@@ -57,7 +57,7 @@ func (w *Worker) producer(ctx context.Context) {
 				logger.LogSugar.Error(err.Error())
 				break
 			}
-			for _, jobForRun := range *jobsForRun {
+			for _, jobForRun := range jobsForRun {
 				logger.LogSugar.Infof("В работу взята задча на запрос к внешнему сервису с номером заказа %s", jobForRun.OrderNumber)
 				w.jobChan <- job{jobRun: jobForRun}
 			}

@@ -36,17 +36,11 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 	jobHandler := handlers.NewJobHandler(ar.manager)
 	accrualHandler := handlers.NewAccrualHandler(ar.manager)
 
-	contextMiddleware := func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-			// Проброс контекста приложения
-			requestWithAppContext := req.Clone(ctx)
-			next.ServeHTTP(res, requestWithAppContext)
-		})
-	}
 	r := chi.NewRouter()
 
 	// Общие мидлвары
 	r.Use(middleware.RequestLogger(logger.LogSugar))
+	// r.Use(handlers.AddCommonContext(ctx))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
@@ -54,7 +48,7 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 	r.Route("/api/user", func(r chi.Router) {
 		// регистрация пользователя
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			registrationHandler.Registration,
 			balanceHandler.CreateUserBalance,
 			registrationHandler.Authentication,
@@ -62,43 +56,43 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 
 		// аутентификация пользователя
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			registrationHandler.AuthenticationFromForm,
 			registrationHandler.Authentication,
 		).Post("/login", finalizeHandler.FinalizeOk)
 
 		// загрузка пользователем номера заказа для расчёта
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
 			orderHandler.UploadingOrder,
 			accrualHandler.CreateZeroAccrualForOrder,
-			jobHandler.CreateTaskToProcessNewOrder,
+			jobHandler.CreateJobToProcessNewOrder,
 		).Post("/orders", func(res http.ResponseWriter, req *http.Request) {
 
 		})
 
 		// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
 		).Get("/orders", orderHandler.OrderList)
 
 		// получение текущего баланса счёта баллов лояльности пользователя
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
 		).Get("/balance", balanceHandler.Balance)
 
 		// запрос на списание баллов с накопительного счёта в счёт оплаты нового заказа
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
 		).Post("/balance/withdraw", withdrawHandler.Withdraw)
 
 		// получение информации о выводе средств с накопительного счёта пользователем
 		r.With(
-			contextMiddleware,
+			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
 		).Get("/withdrawals", withdrawHandler.WithdrawalsList)
 	})

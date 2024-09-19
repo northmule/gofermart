@@ -49,7 +49,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			return
 		}
 		orderNumber := string(rawBody)
-		if !o.orderService.ValidateOrderNumber(orderNumber) {
+		if valid := o.orderService.ValidateOrderNumber(orderNumber); !valid {
 			logger.LogSugar.Infof("Неверный формат номера заказа %s", orderNumber)
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			return
@@ -65,7 +65,7 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 			return
 		}
 		// Заказ найден по номеру
-		if order != nil && order.ID > 0 && order.User.ID > 0 {
+		if order != nil && order.ID > 0 && order.User.UUID != "" {
 			if order.User.UUID == user.UUID {
 				logger.LogSugar.Infof("Заказ %s уже был загружен текущим пользователем", orderNumber)
 				res.WriteHeader(http.StatusOK)
@@ -83,9 +83,9 @@ func (o *OrderHandler) UploadingOrder(next http.Handler) http.Handler {
 		newOrder := models.Order{
 			Number: orderNumber,
 			Status: constants.OrderStatusNew,
-			User:   user,
+			User:   &user,
 		}
-		orderID, err := o.manager.Order().Save(req.Context(), newOrder, newOrder.User.ID)
+		orderID, err := o.manager.Order().Save(req.Context(), newOrder, newOrder.User.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf(err.Error())
 			res.WriteHeader(http.StatusInternalServerError)
@@ -114,18 +114,18 @@ func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if orders == nil || len(*orders) == 0 {
+	if orders == nil || len(orders) == 0 {
 		logger.LogSugar.Infof("Нет заказов для отображения для пользователя %s", user.UUID)
 		res.WriteHeader(http.StatusNoContent)
 		return
 	}
 	var orderListResponse []orderResponse
-	for _, order := range *orders {
+	for _, order := range orders {
 		orderResponse := orderResponse{
 			Number:     order.Number,
 			Status:     order.Status,
 			Accrual:    order.Accrual.Float64,
-			UploadedAt: time.Unix(order.CreatedAt.Time.Unix(), 0).Format(time.RFC3339),
+			UploadedAt: order.CreatedAt.Format(time.RFC3339),
 		}
 		orderListResponse = append(orderListResponse, orderResponse)
 	}

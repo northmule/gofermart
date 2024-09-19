@@ -52,7 +52,7 @@ func NewJobRepository(store storage.DBQuery) *JobRepository {
 	return &instance
 }
 
-func (jr *JobRepository) GetJobForRun(ctx context.Context) (*[]models.Job, error) {
+func (jr *JobRepository) GetJobForRun(ctx context.Context) ([]models.Job, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 
@@ -106,7 +106,7 @@ func (jr *JobRepository) GetJobForRun(ctx context.Context) (*[]models.Job, error
 		return nil, err
 	}
 
-	return &jobs, nil
+	return jobs, nil
 }
 
 func (jr *JobRepository) CreateJobByOrderNumber(ctx context.Context, orderNumber string) (int64, error) {

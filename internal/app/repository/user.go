@@ -22,19 +22,19 @@ func NewUserRepository(store storage.DBQuery) *UserRepository {
 		store: store,
 	}
 	var err error
-	instance.sqlFindByLogin, err = store.Prepare(`select id, name, login, password, created_at, uuid from users where login = $1 limit 1`)
+	instance.sqlFindByLogin, err = store.Prepare(`select id, login, password, created_at, uuid from users where login = $1 limit 1`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
 	}
 
-	instance.sqlCreateUser, err = store.Prepare(`insert into users (name, login, password, uuid) values ($1, $2, $3, $4) returning id`)
+	instance.sqlCreateUser, err = store.Prepare(`insert into users (login, password, uuid) values ($1, $2, $3) returning id`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
 	}
 
-	instance.sqlFindByUUID, err = store.Prepare(`select id, name, login, password, created_at, uuid from users where uuid = $1 limit 1`)
+	instance.sqlFindByUUID, err = store.Prepare(`select id, login, password, created_at, uuid from users where uuid = $1 limit 1`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
@@ -59,7 +59,7 @@ func (r *UserRepository) FindOneByLogin(ctx context.Context, login string) (*mod
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&user.ID, &user.Name, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err := rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf("При обработке значений в FindOneByLogin(%s) произошла ошибка %s", login, err)
 			return nil, err
@@ -85,7 +85,7 @@ func (r *UserRepository) FindOneByUUID(ctx context.Context, uuid string) (*model
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&user.ID, &user.Name, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err := rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
 			logger.LogSugar.Errorf("При обработке значений в FindOneByUUID(%s) произошла ошибка %s", uuid, err)
 			return nil, err
@@ -98,7 +98,7 @@ func (r *UserRepository) FindOneByUUID(ctx context.Context, uuid string) (*model
 func (r *UserRepository) CreateNewUser(ctx context.Context, user models.User) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
-	rows := r.sqlCreateUser.QueryRowContext(ctx, user.Name, user.Login, user.Password, user.UUID)
+	rows := r.sqlCreateUser.QueryRowContext(ctx, user.Login, user.Password, user.UUID)
 	err := rows.Err()
 	if err != nil {
 		logger.LogSugar.Error(err)

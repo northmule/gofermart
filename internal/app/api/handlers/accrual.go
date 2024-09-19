@@ -5,6 +5,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"go.uber.org/zap"
 	"net/http"
 )
 
@@ -24,9 +25,9 @@ func (bh *AccrualHandler) CreateZeroAccrualForOrder(next http.Handler) http.Hand
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
 		newOrder := req.Context().Value(rctx.OrderUpload).(models.Order)
 		_, err := bh.manager.Accrual().CreateAccrualByOrderNumberAndUserUUID(req.Context(), newOrder.Number, newUser.UUID)
-		logger.LogSugar.Infof("Создаю информацию о нулевом списании по заказу %s", newOrder.Number)
+		logger.LogSugar.Info("Создаю информацию о нулевом списании по заказу", zap.String("number", newOrder.Number))
 		if err != nil {
-			logger.LogSugar.Errorf(err.Error())
+			logger.LogSugar.Error(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}

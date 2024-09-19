@@ -54,7 +54,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 
-	if !wh.orderService.ValidateOrderNumber(request.Order) {
+	if valid := wh.orderService.ValidateOrderNumber(request.Order); !valid {
 		logger.LogSugar.Infof("Неверный формат номера заказа %s", request.Order)
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
@@ -78,7 +78,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	}
 
 	//order, err := wh.manager.Order.FindOneByNumber(request.Order)
-	order, err := wh.manager.Order().FindByNumberOrCreate(req.Context(), request.Order, user.ID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
+	order, err := wh.manager.Order().FindByNumberOrCreate(req.Context(), request.Order, user.UUID) // создание заказа если он не найден (ошибка теста или ТЗ ? )
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -100,7 +100,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		return
 	}
-	_, err = wh.manager.Withdrawn().Withdraw(req.Context(), user.ID, request.Sum, order.ID)
+	_, err = wh.manager.Withdrawn().Withdraw(req.Context(), user.UUID, request.Sum, order.ID)
 	if err != nil {
 		logger.LogSugar.Error(err.Error())
 		res.WriteHeader(http.StatusInternalServerError)
@@ -120,7 +120,7 @@ func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Re
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if len(*withdraws) == 0 {
+	if len(withdraws) == 0 {
 		logger.LogSugar.Infof("Нет данных по списаниям для пользователя с uuuid %s", user.UUID)
 		res.WriteHeader(http.StatusNoContent)
 		return
@@ -128,11 +128,11 @@ func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Re
 
 	var responseList []responseWithdrawals
 
-	for _, withdrawn := range *withdraws {
+	for _, withdrawn := range withdraws {
 		response := responseWithdrawals{
 			Order:       withdrawn.Order.Number,
 			Sum:         withdrawn.Value,
-			ProcessedAt: time.Unix(withdrawn.CreatedAt.Time.Unix(), 0).Format(time.RFC3339),
+			ProcessedAt: withdrawn.CreatedAt.Format(time.RFC3339),
 		}
 		responseList = append(responseList, response)
 	}

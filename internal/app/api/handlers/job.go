@@ -19,7 +19,7 @@ func NewJobHandler(manager repository.Repository) *JobHandler {
 	return instance
 }
 
-func (jh *JobHandler) CreateTaskToProcessNewOrder(next http.Handler) http.Handler {
+func (jh *JobHandler) CreateJobToProcessNewOrder(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newOrder := req.Context().Value(rctx.OrderUpload).(models.Order)
 		_, err := jh.manager.Job().CreateJobByOrderNumber(req.Context(), newOrder.Number)

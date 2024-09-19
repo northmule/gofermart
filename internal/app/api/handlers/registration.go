@@ -64,7 +64,6 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 		}
 
 		newUser := models.User{
-			Name:     "Имя",
 			Login:    request.Login,
 			Password: util.PasswordHash(request.Password),
 			UUID:     uuid.NewString(),

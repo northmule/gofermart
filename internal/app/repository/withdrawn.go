@@ -65,7 +65,7 @@ func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 }
 
 // Withdraw списание с обновлением баланса пользователя
-func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userID int, withdraw float64, orderID int) (int64, error) {
+func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userUUID string, withdraw float64, orderID int) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := wr.store.Begin()
@@ -73,7 +73,7 @@ func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userID int, withdra
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
-	rows := tx.QueryRowContext(ctx, `insert into withdrawals (user_id, value, order_id) values ($1, $2, $3) RETURNING id;`, userID, withdraw, orderID)
+	rows := tx.QueryRowContext(ctx, `insert into withdrawals (user_id, value, order_id) values ((select id from users where uuid= $1 limit 1), $2, $3) RETURNING id;`, userUUID, withdraw, orderID)
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
@@ -89,10 +89,10 @@ func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userID int, withdra
 		return 0, err
 	}
 
-	rows = tx.QueryRowContext(ctx, `update user_balance set value = (value - $1) where user_id = $2`, withdraw, userID)
+	rows = tx.QueryRowContext(ctx, `update user_balance set value = (value - $1) where user_id = (select id from users where uuid = $2 limit 1)`, withdraw, userUUID)
 	if rows.Err() != nil {
 		err = errors.Join(rows.Err(), tx.Rollback())
-		logger.LogSugar.Errorf("При вызове UpdateByUserID(%d) произошла ошибка %s", userID, err)
+		logger.LogSugar.Errorf("При вызове UpdateByUserID(%d) произошла ошибка %s", userUUID, err)
 		return 0, rows.Err()
 	}
 
@@ -152,7 +152,7 @@ func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(ctx context.Context, u
 	return sum.Float64, nil
 }
 
-func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, userUUID string) (*[]models.Withdrawn, error) {
+func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, userUUID string) ([]models.Withdrawn, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindWithdrawsByUserUUID.QueryContext(ctx, userUUID)
@@ -175,9 +175,9 @@ func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, user
 			logger.LogSugar.Errorf("При обработке значений в FindWithdrawsByUserUUID(%s) произошла ошибка %s", userUUID, err)
 			return nil, err
 		}
-		withdraw.Order = order
+		withdraw.Order = &order
 		withdraws = append(withdraws, withdraw)
 	}
 
-	return &withdraws, nil
+	return withdraws, nil
 }

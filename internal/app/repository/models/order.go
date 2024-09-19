@@ -2,14 +2,15 @@ package models
 
 import (
 	"database/sql"
+	"time"
 )
 
 type Order struct {
-	ID        int             `json:"id,omitempty"`
+	ID        int             `json:"id"`
 	Number    string          `json:"number"`
 	Status    string          `json:"status"`
-	User      User            `json:"user"`
+	User      *User           `json:"user"`
 	Accrual   sql.NullFloat64 `json:"accrual"`
-	CreatedAt sql.NullTime    `json:"created_at,omitempty"`
-	DeletedAt sql.NullTime    `json:"deleted_at,omitempty"`
+	CreatedAt time.Time       `json:"created_at"`
+	DeletedAt sql.NullTime    `json:"deleted_at"`
 }
