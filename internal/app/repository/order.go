@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/constants"
 	"github.com/northmule/gophermart/internal/app/repository/models"
@@ -14,8 +15,6 @@ import (
 type OrderRepository struct {
 	store                   storage.DBQuery
 	sqlFindByNumber         *sql.Stmt
-	sqlCreateOrder          *sql.Stmt
-	sqlLinkOrderToUser      *sql.Stmt
 	sqlFindOrdersByUserUUID *sql.Stmt
 }
 
@@ -25,27 +24,13 @@ func NewOrderRepository(store storage.DBQuery) *OrderRepository {
 	}
 
 	var err error
-	instance.sqlFindByNumber, err = store.Prepare(`select o.id, o.number, o.status, o.created_at, o.deleted_at,
-       													u.id, u.login, u.password, u.created_at, u.uuid
-															from orders as o
-                                                  join user_orders uo on uo.order_id = o.id
-                                                  join users u on u.id = uo.user_id
-                                                  where number = $1 limit 1`)
+	instance.sqlFindByNumber, err = store.Prepare(`select o.id, o.number, o.status, o.created_at, o.deleted_at, u.id, u.login, u.password, u.created_at, u.uuid
+															from orders as o join user_orders uo on uo.order_id = o.id  join users u on u.id = uo.user_id where number = $1 limit 1`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
 	}
 
-	instance.sqlCreateOrder, err = store.Prepare(`insert into orders (number, status) values ($1, $2) RETURNING id;`)
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return nil
-	}
-	instance.sqlLinkOrderToUser, err = store.Prepare(`insert into user_orders (user_id, order_id) values ((select id from users where uuid=$1 limit 1), $2) RETURNING id;`)
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return nil
-	}
 	instance.sqlFindOrdersByUserUUID, err = store.Prepare(`select o.id, o."number", o.status, o.created_at, o.deleted_at, sum(a.value) as accrual from orders o 
 																	join user_orders uo on uo.order_id = o.id join users u on u.id = uo.user_id left join accruals a on a.order_id = o.id where u."uuid" = $1 group by o.id order by o.id desc`,
 	)
@@ -111,9 +96,16 @@ func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber 
 func (o *OrderRepository) Save(ctx context.Context, order models.Order, userUUID string) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
-	rows := o.sqlCreateOrder.QueryRowContext(ctx, order.Number, order.Status)
-	err := rows.Err()
+	var err error
+	var tx *sql.Tx
+	if tx, err = o.store.Begin(); err != nil {
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+	rows := tx.QueryRowContext(ctx, `insert into orders (number, status) values ($1, $2) RETURNING id;`, order.Number, order.Status)
+	err = rows.Err()
 	if err != nil {
+		err = errors.Join(err, tx.Rollback())
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
@@ -124,13 +116,17 @@ func (o *OrderRepository) Save(ctx context.Context, order models.Order, userUUID
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
-	rows = o.sqlLinkOrderToUser.QueryRowContext(ctx, userUUID, orderID)
+	rows = tx.QueryRowContext(ctx, `insert into user_orders (user_id, order_id) values ((select id from users where uuid=$1 limit 1), $2) RETURNING id;`, userUUID, orderID)
 	err = rows.Err()
 	if err != nil {
+		err = errors.Join(err, tx.Rollback())
 		logger.LogSugar.Error(err)
 		return 0, err
 	}
-
+	if err = tx.Commit(); err != nil {
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
 	return orderID, nil
 }
 

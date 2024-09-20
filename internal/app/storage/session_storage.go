@@ -22,6 +22,8 @@ func (s *SessionStorage) Add(key string, value string) {
 
 func (s *SessionStorage) Get(key string) (string, bool) {
 	sessionUserUUID, ok := s.Values[key]
+	s.mx.RLock()
+	defer s.mx.RUnlock()
 	return sessionUserUUID, ok
 }
 

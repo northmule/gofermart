@@ -114,7 +114,7 @@ func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if orders == nil || len(orders) == 0 {
+	if len(orders) == 0 {
 		logger.LogSugar.Infof("Нет заказов для отображения для пользователя %s", user.UUID)
 		res.WriteHeader(http.StatusNoContent)
 		return

@@ -15,8 +15,6 @@ type JobRepository struct {
 	store                     storage.DBQuery
 	sqlGetJobForRun           *sql.Stmt
 	sqlCreateJobByOrderNumber *sql.Stmt
-	sqlUpdateJobByOrderNumber *sql.Stmt
-	sqlDeleteJobByOrderNumber *sql.Stmt
 }
 
 func NewJobRepository(store storage.DBQuery) *JobRepository {
@@ -32,18 +30,6 @@ func NewJobRepository(store storage.DBQuery) *JobRepository {
 	}
 
 	instance.sqlCreateJobByOrderNumber, err = store.Prepare(`insert into jobs_order (order_number) values ($1) returning id;`)
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return nil
-	}
-
-	instance.sqlUpdateJobByOrderNumber, err = store.Prepare(`update jobs_order set next_run = now() + interval '10 sec', run_cnt = run_cnt + 1, is_work = false where order_number = $1`)
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return nil
-	}
-
-	instance.sqlDeleteJobByOrderNumber, err = store.Prepare(`delete from jobs_order where order_number = $1`)
 	if err != nil {
 		logger.LogSugar.Error(err)
 		return nil
@@ -133,33 +119,55 @@ func (jr *JobRepository) CreateJobByOrderNumber(ctx context.Context, orderNumber
 func (jr *JobRepository) UpdateJobByOrderNumber(ctx context.Context, orderNumber string) error {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
-	rows, err := jr.sqlUpdateJobByOrderNumber.QueryContext(ctx, orderNumber)
+	var err error
+	var tx *sql.Tx
+	if tx, err = jr.store.Begin(); err != nil {
+		logger.LogSugar.Error(err)
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `update jobs_order set next_run = now() + interval '10 sec', run_cnt = run_cnt + 1, is_work = false where order_number = $1`, orderNumber)
 	if err != nil {
+		err = errors.Join(err, tx.Rollback())
 		logger.LogSugar.Errorf("При вызове UpdateJobByOrderNumber(%s) произошла ошибка %s", orderNumber, err)
 		return err
 	}
 	err = rows.Err()
 	if err != nil {
+		err = errors.Join(rows.Err(), tx.Rollback())
 		logger.LogSugar.Errorf("При вызове UpdateJobByOrderNumber(%s) произошла ошибка %s", orderNumber, err)
 		return err
 	}
-
+	if err = tx.Commit(); err != nil {
+		logger.LogSugar.Error(err)
+		return nil
+	}
 	return nil
 }
 
 func (jr *JobRepository) DeleteJobByOrderNumber(ctx context.Context, orderNumber string) error {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
-	rows, err := jr.sqlDeleteJobByOrderNumber.QueryContext(ctx, orderNumber)
+	var err error
+	var tx *sql.Tx
+	if tx, err = jr.store.Begin(); err != nil {
+		logger.LogSugar.Error(err)
+		return err
+	}
+	rows, err := tx.QueryContext(ctx, `delete from jobs_order where order_number = $1`, orderNumber)
 	if err != nil {
+		err = errors.Join(err, tx.Rollback())
 		logger.LogSugar.Errorf("При вызове DeleteJobByOrderNumber(%s) произошла ошибка %s", orderNumber, err)
 		return err
 	}
 	err = rows.Err()
 	if err != nil {
+		err = errors.Join(rows.Err(), tx.Rollback())
 		logger.LogSugar.Errorf("При вызове DeleteJobByOrderNumber(%s) произошла ошибка %s", orderNumber, err)
 		return err
 	}
-
+	if err = tx.Commit(); err != nil {
+		logger.LogSugar.Error(err)
+		return nil
+	}
 	return nil
 }

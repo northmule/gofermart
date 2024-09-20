@@ -23,8 +23,6 @@ func (j *JobRepositoryTestSuite) SetupTest() {
 
 	j.mock.ExpectPrepare("select")
 	j.mock.ExpectPrepare("insert")
-	j.mock.ExpectPrepare("update")
-	j.mock.ExpectPrepare("delete")
 	j.repository = NewJobRepository(j.DB)
 	require.NoError(j.T(), err)
 }
@@ -63,14 +61,18 @@ func (j *JobRepositoryTestSuite) TestCreateJobByOrderNumber() {
 
 func (j *JobRepositoryTestSuite) TestUpdateJobByOrderNumber() {
 	orderNumber := "100"
+	j.mock.ExpectBegin()
 	j.mock.ExpectQuery("update").WithArgs(orderNumber).WillReturnRows(sqlmock.NewRows([]string{""}))
+	j.mock.ExpectCommit()
 	err := j.repository.UpdateJobByOrderNumber(context.Background(), orderNumber)
 	require.NoError(j.T(), err)
 }
 
 func (j *JobRepositoryTestSuite) TestDeleteJobByOrderNumber() {
 	orderNumber := "100"
+	j.mock.ExpectBegin()
 	j.mock.ExpectQuery("delete").WithArgs(orderNumber).WillReturnRows(sqlmock.NewRows([]string{""}))
+	j.mock.ExpectCommit()
 	err := j.repository.DeleteJobByOrderNumber(context.Background(), orderNumber)
 	require.NoError(j.T(), err)
 }
