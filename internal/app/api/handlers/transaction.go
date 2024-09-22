@@ -52,6 +52,6 @@ func (th *TransactionHandler) Transaction(next http.Handler) http.Handler {
 			logger.LogSugar.Errorf("Ошибка commit запроса: %s", err)
 			res.WriteHeader(http.StatusInternalServerError)
 		}
-		logger.LogSugar.Info("Транзакция завершена")
+		logger.LogSugar.Info("Транзакция завершена. Все изменения сохранены.")
 	})
 }
