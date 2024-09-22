@@ -6,6 +6,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -67,7 +68,8 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
-		_, err := bh.manager.Balance().CreateBalanceByUserUUID(req.Context(), newUser.UUID)
+		tx := req.Context().Value(rctx.TransactionCtxKey).(*storage.Transaction)
+		_, err := bh.manager.Balance().TxCreateBalanceByUserUUID(req.Context(), tx, newUser.UUID)
 		if err != nil {
 			logger.LogSugar.Error(err)
 			res.WriteHeader(http.StatusInternalServerError)

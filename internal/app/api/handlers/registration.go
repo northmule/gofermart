@@ -10,6 +10,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/authentication"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"github.com/northmule/gophermart/internal/app/util"
 	"io"
 	"net/http"
@@ -39,7 +40,7 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		rawBody, err := io.ReadAll(req.Body)
 		if err != nil {
-			logger.LogSugar.Errorf(err.Error())
+			logger.LogSugar.Error(err)
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -68,8 +69,8 @@ func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
 			Password: util.PasswordHash(request.Password),
 			UUID:     uuid.NewString(),
 		}
-
-		userID, err := r.manager.User().CreateNewUser(req.Context(), newUser)
+		tx := req.Context().Value(rctx.TransactionCtxKey).(*storage.Transaction)
+		userID, err := r.manager.User().TxCreateNewUser(req.Context(), tx, newUser)
 		if err != nil {
 			res.WriteHeader(http.StatusInternalServerError)
 			return

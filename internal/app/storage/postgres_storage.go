@@ -10,8 +10,6 @@ import (
 	"time"
 )
 
-const CodeErrorDuplicateKey = "23505"
-
 type DBQuery interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
@@ -22,16 +20,17 @@ type DBQuery interface {
 }
 
 type TxDBQuery interface {
-	TxQueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error)
-	TxOpen() error
-	TxRollback() error
-	TxCommit() error
+	QueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error)
+	Rollback() error
+	Commit() error
+	Tx() *sql.Tx
+	Error() []error
+	AddError(e error)
 }
 
 type PostgresStorage struct {
 	DB    DBQuery
 	RawDB *sql.DB
-	TxDB  TxDBQuery
 	tx    *sql.Tx
 }
 
@@ -55,11 +54,29 @@ func (p *PostgresStorage) Ping(ctx context.Context) error {
 	return p.DB.PingContext(ctx)
 }
 
-func (p *PostgresStorage) TxQueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error) {
-	rows := p.tx.QueryRowContext(ctx, query, args...)
+type Transaction struct {
+	t *sql.Tx
+	e []error
+}
+
+// NewTransaction Открывает новую транзакцию
+func NewTransaction(db DBQuery) (*Transaction, error) {
+	tx, err := db.Begin()
+	if err != nil {
+		return nil, err
+	}
+	instance := Transaction{
+		t: tx,
+		e: make([]error, 0),
+	}
+	return &instance, nil
+}
+
+func (t *Transaction) QueryRowContext(ctx context.Context, query string, args ...any) (*sql.Row, error) {
+	rows := t.t.QueryRowContext(ctx, query, args...)
 	err := rows.Err()
 	if err != nil {
-		err = errors.Join(err, p.tx.Rollback())
+		err = errors.Join(err, t.t.Rollback())
 		logger.LogSugar.Error(err)
 		return nil, err
 	}
@@ -68,19 +85,19 @@ func (p *PostgresStorage) TxQueryRowContext(ctx context.Context, query string, a
 
 }
 
-func (p *PostgresStorage) TxOpen() error {
-	var err error
-	p.tx, err = p.DB.Begin()
-	if err != nil {
-		logger.LogSugar.Error(err)
-		return err
-	}
-	return nil
+func (t *Transaction) Tx() *sql.Tx {
+	return t.t
 }
 
-func (p *PostgresStorage) TxRollback() error {
-	return p.tx.Rollback()
+func (t *Transaction) Rollback() error {
+	return t.t.Rollback()
 }
-func (p *PostgresStorage) TxCommit() error {
-	return p.tx.Commit()
+func (t *Transaction) Commit() error {
+	return t.t.Commit()
+}
+func (t *Transaction) Error() []error {
+	return t.e
+}
+func (t *Transaction) AddError(e error) {
+	t.e = append(t.e, e)
 }

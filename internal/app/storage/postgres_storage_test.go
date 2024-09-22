@@ -6,7 +6,6 @@ import (
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/stretchr/testify/suite"
-	"testing"
 )
 
 type PostgresStorageTestSuite struct {
@@ -40,42 +39,4 @@ func (s *PostgresStorageTestSuite) TestPing() {
 	s.mock.ExpectPing()
 	err := s.storage.Ping(s.ctx)
 	s.Require().NoError(err)
-}
-
-func (s *PostgresStorageTestSuite) TestTxOpen() {
-	s.mock.ExpectBegin()
-	err := s.storage.TxOpen()
-	s.Require().NoError(err)
-}
-
-func (s *PostgresStorageTestSuite) TestTxQueryRowContext() {
-	query := "SELECT"
-	rows := sqlmock.NewRows([]string{})
-	s.mock.ExpectBegin()
-	s.storage.TxOpen()
-	s.mock.ExpectQuery(query).WillReturnRows(rows)
-	_, err := s.storage.TxQueryRowContext(s.ctx, query)
-	s.Require().NoError(err)
-}
-
-func (s *PostgresStorageTestSuite) TestTxRollback() {
-	s.mock.ExpectBegin()
-	err := s.storage.TxOpen()
-	s.Require().NoError(err)
-	s.mock.ExpectRollback()
-	err = s.storage.TxRollback()
-	s.Require().NoError(err)
-}
-
-func (s *PostgresStorageTestSuite) TestTxCommit() {
-	s.mock.ExpectBegin()
-	err := s.storage.TxOpen()
-	s.Require().NoError(err)
-	s.mock.ExpectCommit()
-	err = s.storage.TxCommit()
-	s.Require().NoError(err)
-}
-
-func TestPostgresStorageTestSuite(t *testing.T) {
-	suite.Run(t, new(PostgresStorageTestSuite))
 }

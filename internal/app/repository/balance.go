@@ -86,3 +86,25 @@ func (br *BalanceRepository) CreateBalanceByUserUUID(ctx context.Context, userUU
 
 	return id, nil
 }
+
+func (br *BalanceRepository) TxCreateBalanceByUserUUID(ctx context.Context, tx storage.TxDBQuery, userUUID string) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
+	defer cancel()
+	rows := tx.Tx().QueryRowContext(ctx, `insert into user_balance (user_id, value) values ((select u.id from users u where u.uuid = $1 limit 1), 0) returning id;`, userUUID)
+	err := rows.Err()
+	if err != nil {
+		tx.AddError(err)
+		logger.LogSugar.Errorf("При вызове CreateBalanceByUserUUID(%s) произошла ошибка %s", userUUID, err)
+		return 0, err
+	}
+
+	var id int64
+	err = rows.Scan(&id)
+	if err != nil {
+		tx.AddError(err)
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+
+	return id, nil
+}

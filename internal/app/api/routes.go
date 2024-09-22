@@ -8,16 +8,18 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/services/order"
-	"net/http"
+	"github.com/northmule/gophermart/internal/app/storage"
 )
 
 type AppRoutes struct {
 	manager repository.Repository
+	storage storage.DBQuery
 }
 
-func NewAppRoutes(repositoryManager repository.Repository) AppRoutes {
+func NewAppRoutes(repositoryManager repository.Repository, storage storage.DBQuery) AppRoutes {
 	instance := AppRoutes{
 		manager: repositoryManager,
+		storage: storage,
 	}
 	return instance
 }
@@ -35,6 +37,7 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 	withdrawHandler := handlers.NewWithdrawHandler(ar.manager, orderService)
 	jobHandler := handlers.NewJobHandler(ar.manager)
 	accrualHandler := handlers.NewAccrualHandler(ar.manager)
+	transactionHandler := handlers.NewTransactionHandler(ar.storage)
 
 	r := chi.NewRouter()
 
@@ -49,6 +52,7 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 		// регистрация пользователя
 		r.With(
 			handlers.AddCommonContext(ctx),
+			transactionHandler.Transaction, // весь запрос в рамках транзации
 			registrationHandler.Registration,
 			balanceHandler.CreateUserBalance,
 			registrationHandler.Authentication,
@@ -68,9 +72,7 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 			orderHandler.UploadingOrder,
 			accrualHandler.CreateZeroAccrualForOrder,
 			jobHandler.CreateJobToProcessNewOrder,
-		).Post("/orders", func(res http.ResponseWriter, req *http.Request) {
-
-		})
+		).Post("/orders", finalizeHandler.FinalizeOk)
 
 		// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 		r.With(

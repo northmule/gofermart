@@ -113,3 +113,24 @@ func (r *UserRepository) CreateNewUser(ctx context.Context, user models.User) (i
 	}
 	return id, nil
 }
+
+func (r *UserRepository) TxCreateNewUser(ctx context.Context, tx storage.TxDBQuery, user models.User) (int64, error) {
+	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
+	defer cancel()
+	rows := tx.Tx().QueryRowContext(ctx, `insert into users (login, password, uuid) values ($1, $2, $3) returning id`, user.Login, user.Password, user.UUID)
+	err := rows.Err()
+	if err != nil {
+		tx.AddError(err)
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+
+	var id int64
+	err = rows.Scan(&id)
+	if err != nil {
+		tx.AddError(err)
+		logger.LogSugar.Error(err)
+		return 0, err
+	}
+	return id, nil
+}
