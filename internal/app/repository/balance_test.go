@@ -34,8 +34,8 @@ func (s *BalanceRepositoryTestSuite) TestFindOneByUserUUID() {
 	userUUID := "uuid123"
 
 	s.mock.ExpectQuery("select").
-		WithArgs(userUUID).WillReturnRows(sqlmock.NewRows([]string{"b.id", "b.value", "b.updated_at", "u.id", "u.name", "u.login", " u.password", "u.created_at", "u.uuid"}).
-		AddRow("1", "10", time.Now(), "2", "name", "login", "pwd", time.Now(), "uuid"))
+		WithArgs(userUUID).WillReturnRows(sqlmock.NewRows([]string{"b.id", "b.value", "b.updated_at", "u.id", "u.login", " u.password", "u.created_at", "u.uuid"}).
+		AddRow("1", "10", time.Now(), "2", "login", "pwd", time.Now(), "uuid"))
 	balance, err := s.repository.FindOneByUserUUID(context.Background(), userUUID)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), 1, balance.ID)

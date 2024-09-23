@@ -1,58 +1,39 @@
 package storage
 
 import (
-	"sync"
 	"testing"
+	"time"
 )
 
-func TestSessionStorage_Add(t *testing.T) {
-	storage := NewSessionStorage()
+func TestAdd(t *testing.T) {
+	ss := NewSessionStorage()
+	token := "testToken"
+	expire := time.Now().Add(time.Hour)
 
-	storage.Add("key1", "value1")
-	if val, ok := storage.Values["key1"]; !ok || val != "value1" {
-		t.Errorf("Expected key1 with value1, but got %v", val)
+	ss.Add(token, expire)
+
+	if _, ok := ss.(*SessionStorage).values[token]; !ok {
+		t.Errorf("Token not added to storage")
 	}
 }
 
-func TestSessionStorage_Get(t *testing.T) {
-	storage := NewSessionStorage()
+func TestIsValid(t *testing.T) {
+	ss := NewSessionStorage()
+	token := "testToken"
+	expire := time.Now().Add(time.Hour)
 
-	storage.Add("key1", "value1")
-	if val, ok := storage.Get("key1"); !ok || val != "value1" {
-		t.Errorf("Expected key1 with value1, but got %v", val)
-	}
-}
-
-func TestSessionStorage_GetAll(t *testing.T) {
-	storage := NewSessionStorage()
-
-	storage.Add("key1", "value1")
-	storage.Add("key2", "value2")
-
-	allValues := storage.GetAll()
-	if len(allValues) != 2 {
-		t.Errorf("Expected 2 values, but got %d", len(allValues))
-	}
-	if allValues["key1"] != "value1" || allValues["key2"] != "value2" {
-		t.Errorf("Expected values to be key1:value1, key2:value2, but got %v", allValues)
-	}
-}
-
-func TestSessionStorage_ThreadSafety(t *testing.T) {
-	storage := NewSessionStorage()
-	var wg sync.WaitGroup
-
-	for i := 0; i < 1000; i++ {
-		wg.Add(1)
-		go func(i int) {
-			defer wg.Done()
-			storage.Add("key", "value")
-		}(i)
+	if ss.IsValid(token) {
+		t.Errorf("Token should be invalid initially")
 	}
 
-	wg.Wait()
+	ss.Add(token, expire)
 
-	if len(storage.Values) != 1 {
-		t.Errorf("Expected 1 unique key, but got %d", len(storage.Values))
+	if !ss.IsValid(token) {
+		t.Errorf("Token should be valid after adding")
+	}
+
+	time.Sleep(time.Hour)
+	if ss.IsValid(token) {
+		t.Errorf("Token should be invalid after expiration")
 	}
 }

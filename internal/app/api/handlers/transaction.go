@@ -36,9 +36,9 @@ func (th *TransactionHandler) Transaction(next http.Handler) http.Handler {
 				logger.LogSugar.Info("Возникла ошибка приложения. Откат транзакции.", r)
 				if err = transaction.Rollback(); err != nil {
 					logger.LogSugar.Errorf("Ошибка commit запроса: %s", err)
-
 				}
 			}
+			transaction = nil
 		}()
 		ctx := context.WithValue(req.Context(), rctx.TransactionCtxKey, transaction)
 		req = req.WithContext(ctx)

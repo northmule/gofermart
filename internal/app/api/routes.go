@@ -14,12 +14,14 @@ import (
 type AppRoutes struct {
 	manager repository.Repository
 	storage storage.DBQuery
+	session storage.SessionManager
 }
 
-func NewAppRoutes(repositoryManager repository.Repository, storage storage.DBQuery) AppRoutes {
+func NewAppRoutes(repositoryManager repository.Repository, storage storage.DBQuery, session storage.SessionManager) AppRoutes {
 	instance := AppRoutes{
 		manager: repositoryManager,
 		storage: storage,
+		session: session,
 	}
 	return instance
 }
@@ -29,8 +31,8 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 
 	// Обработчики
 	finalizeHandler := handlers.NewFinalizeHandler()
-	registrationHandler := handlers.NewRegistrationHandler(ar.manager)
-	checkAuthenticationHandler := handlers.NewCheckAuthenticationHandler(ar.manager)
+	registrationHandler := handlers.NewRegistrationHandler(ar.manager, ar.session)
+	checkAuthenticationHandler := handlers.NewCheckAuthenticationHandler(ar.manager, ar.session)
 	orderService := order.NewOrderService()
 	orderHandler := handlers.NewOrderHandler(ar.manager, orderService)
 	balanceHandler := handlers.NewBalanceHandler(ar.manager)

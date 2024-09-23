@@ -18,6 +18,7 @@ import (
 
 type RegistrationHandler struct {
 	manager repository.Repository
+	session storage.SessionManager
 }
 
 type registrationRequestBody struct {
@@ -29,9 +30,10 @@ type authenticationRequestBody struct {
 	registrationRequestBody
 }
 
-func NewRegistrationHandler(manager repository.Repository) *RegistrationHandler {
+func NewRegistrationHandler(manager repository.Repository, session storage.SessionManager) *RegistrationHandler {
 	instance := &RegistrationHandler{
 		manager: manager,
+		session: session,
 	}
 	return instance
 }
@@ -145,6 +147,8 @@ func (r *RegistrationHandler) Authentication(next http.Handler) http.Handler {
 			Secure:  false,
 			Path:    "/",
 		})
+
+		r.session.Add(token, tokenExp)
 
 		res.Header().Set("Authorization", tokenValue)
 		logger.LogSugar.Infof("Пользователь прошёл аунтификацию, выдан токен с uuid %s", tokenValue)

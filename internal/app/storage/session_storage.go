@@ -1,32 +1,40 @@
 package storage
 
-import "sync"
+import (
+	"sync"
+	"time"
+)
 
 // SessionStorage данные по авторизованным пользователям
 type SessionStorage struct {
-	Values map[string]string
+	values map[string]time.Time
 	mx     sync.RWMutex
 }
 
-func NewSessionStorage() *SessionStorage {
+type SessionManager interface {
+	Add(token string, expire time.Time)
+	IsValid(token string) bool
+}
+
+func NewSessionStorage() SessionManager {
 	return &SessionStorage{
-		Values: make(map[string]string, 100),
+		values: make(map[string]time.Time),
 	}
 }
 
-func (s *SessionStorage) Add(key string, value string) {
+func (s *SessionStorage) Add(token string, expire time.Time) {
 	s.mx.Lock()
 	defer s.mx.Unlock()
-	s.Values[key] = value
+	s.values[token] = expire
 }
 
-func (s *SessionStorage) Get(key string) (string, bool) {
-	sessionUserUUID, ok := s.Values[key]
+func (s *SessionStorage) IsValid(token string) bool {
 	s.mx.RLock()
 	defer s.mx.RUnlock()
-	return sessionUserUUID, ok
-}
+	expireTime, ok := s.values[token]
+	if !ok {
+		return false
+	}
 
-func (s *SessionStorage) GetAll() map[string]string {
-	return s.Values
+	return expireTime.After(time.Now())
 }

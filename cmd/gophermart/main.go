@@ -63,9 +63,9 @@ func run(ctx context.Context) error {
 	logger.LogSugar.Info("Инициализация worker-ов")
 	worker := job.NewWorker(repositoryManager, accrualClient)
 	worker.Run(ctx)
-
+	sessionStorage := storage.NewSessionStorage()
 	logger.LogSugar.Info("Подготовка сервера к запуску")
-	routes := api.NewAppRoutes(repositoryManager, store.DB)
+	routes := api.NewAppRoutes(repositoryManager, store.DB, sessionStorage)
 	httpServer := http.Server{
 		Addr:    cfg.ServerURL,
 		Handler: routes.DefiningAppRoutes(ctx),

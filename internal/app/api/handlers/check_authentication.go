@@ -6,17 +6,20 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/services/authentication"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/northmule/gophermart/internal/app/storage"
 	"net/http"
 	"strings"
 )
 
 type CheckAuthenticationHandler struct {
 	manager repository.Repository
+	session storage.SessionManager
 }
 
-func NewCheckAuthenticationHandler(manager repository.Repository) *CheckAuthenticationHandler {
+func NewCheckAuthenticationHandler(manager repository.Repository, session storage.SessionManager) *CheckAuthenticationHandler {
 	instance := &CheckAuthenticationHandler{
 		manager: manager,
+		session: session,
 	}
 	return instance
 }
@@ -39,6 +42,12 @@ func (c *CheckAuthenticationHandler) Check(next http.Handler) http.Handler {
 		logger.LogSugar.Infof("Проверка UUID %s из значений cookie", userUUID)
 		if valid := authentication.ValidateToken(userUUID, token, authentication.HMACSecretKey); !valid {
 			logger.LogSugar.Infof("Значение UUID %s из cookie не прошло проверку подписи", userUUID)
+			res.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+
+		if ok := c.session.IsValid(token); !ok {
+			logger.LogSugar.Infof("Время жизни токена пользователя с uuid %s истёк", userUUID)
 			res.WriteHeader(http.StatusUnauthorized)
 			return
 		}
