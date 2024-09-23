@@ -31,6 +31,15 @@ func (th *TransactionHandler) Transaction(next http.Handler) http.Handler {
 			res.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		defer func() {
+			if r := recover(); r != nil {
+				logger.LogSugar.Info("Возникла ошибка приложения. Откат транзакции.", r)
+				if err = transaction.Rollback(); err != nil {
+					logger.LogSugar.Errorf("Ошибка commit запроса: %s", err)
+
+				}
+			}
+		}()
 		ctx := context.WithValue(req.Context(), rctx.TransactionCtxKey, transaction)
 		req = req.WithContext(ctx)
 
