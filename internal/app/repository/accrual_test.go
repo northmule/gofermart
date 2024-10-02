@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -47,7 +48,7 @@ func (suite *AccrualRepositoryTestSuite) TestUpdateTxByOrderNumber() {
 
 	orderNumber := "12345"
 	orderStatus := "ok"
-	accrual := float64(50)
+	accrual := decimal.NewFromFloat(50)
 
 	suite.mock.ExpectBegin()
 	suite.mock.ExpectQuery("update accruals").

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/shopspring/decimal"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -20,7 +21,7 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 				t.Errorf("Expected path '/api/orders/12345', got %s", r.URL.Path)
 			}
 			w.WriteHeader(http.StatusOK)
-			response := ResponseAccrual{Order: "12345", Status: "OK", Accrual: 100.0}
+			response := ResponseAccrual{Order: "12345", Status: "OK", Accrual: decimal.NewFromFloat(100.0)}
 			json.NewEncoder(w).Encode(response)
 		}))
 		defer ts.Close()
@@ -36,8 +37,8 @@ func TestAccrualClient_SendOrderNumber(t *testing.T) {
 		if response.Status != "OK" {
 			t.Errorf("Expected status 'OK', got %s", response.Status)
 		}
-		if response.Accrual != 100.0 {
-			t.Errorf("Expected accrual '100.0', got %f", response.Accrual)
+		if response.Accrual != decimal.NewFromFloat(100.0) {
+			t.Errorf("Expected accrual '100.0', got %s", response.Accrual)
 		}
 	})
 	t.Run("Ошибка_сервера", func(t *testing.T) {

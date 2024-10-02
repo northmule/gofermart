@@ -121,10 +121,11 @@ func (o *OrderHandler) OrderList(res http.ResponseWriter, req *http.Request) {
 	}
 	var orderListResponse []orderResponse
 	for _, order := range orders {
+		orderAccrual, _ := order.Accrual.Float64()
 		orderResponse := orderResponse{
 			Number:     order.Number,
 			Status:     order.Status,
-			Accrual:    order.Accrual.Float64,
+			Accrual:    orderAccrual,
 			UploadedAt: order.CreatedAt.Format(time.RFC3339),
 		}
 		orderListResponse = append(orderListResponse, orderResponse)

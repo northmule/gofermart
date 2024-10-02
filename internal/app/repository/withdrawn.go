@@ -8,6 +8,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/storage"
+	"github.com/shopspring/decimal"
 	"time"
 )
 
@@ -65,7 +66,7 @@ func NewWithdrawnRepository(store storage.DBQuery) *WithdrawnRepository {
 }
 
 // Withdraw списание с обновлением баланса пользователя
-func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userUUID string, withdraw float64, orderID int) (int64, error) {
+func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userUUID string, withdraw decimal.Decimal, orderID int) (int64, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := wr.store.Begin()
@@ -128,28 +129,29 @@ func (wr *WithdrawnRepository) FindOneByOrderID(ctx context.Context, orderID int
 	return &withdraw, nil
 }
 
-func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(ctx context.Context, userUUID string) (float64, error) {
+func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(ctx context.Context, userUUID string) (decimal.Decimal, error) {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	rows, err := wr.sqlFindSumWithdrawnByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
 		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return 0, err
+		return decimal.NewFromFloat(0), err
 	}
 	err = rows.Err()
 	if err != nil {
 		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return 0, err
+		return decimal.NewFromFloat(0), err
 	}
-	var sum sql.NullFloat64
+	var sum sql.NullString
 	if rows.Next() {
 		err := rows.Scan(&sum)
 		if err != nil {
 			logger.LogSugar.Errorf("При обработке значений в FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-			return 0, err
+			return decimal.NewFromFloat(0), err
 		}
 	}
-	return sum.Float64, nil
+	sumDecimal, _ := decimal.NewFromString(sum.String)
+	return sumDecimal, nil
 }
 
 func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, userUUID string) ([]models.Withdrawn, error) {

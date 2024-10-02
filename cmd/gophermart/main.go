@@ -38,32 +38,39 @@ func run(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+
 	logger.LogSugar.Infof("Конфигурация приложения %#v", cfg)
+
 	logger.LogSugar.Info("Инициализация базы данных")
 	store, err := storage.NewPostgresStorage(cfg.DatabaseURI)
 	if err != nil {
 		return err
 	}
+
 	logger.LogSugar.Info("Проверка подключения к БД")
 	err = store.Ping(ctx)
 	if err != nil {
 		return err
 	}
+
 	logger.LogSugar.Info("Инициализация миграций")
 	migrations := db.NewMigrations(store.RawDB)
 	err = migrations.Up(ctx)
 	if err != nil {
 		return err
 	}
+
 	logger.LogSugar.Info("Инициализация менеджера репозитариев")
 	repositoryManager := repository.NewManager(store.DB)
 
 	logger.LogSugar.Info("Инициализация клиента Accrual")
 	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar)
+
 	logger.LogSugar.Info("Инициализация worker-ов")
 	worker := job.NewWorker(repositoryManager, accrualClient)
 	worker.Run(ctx)
 	sessionStorage := storage.NewSessionStorage()
+
 	logger.LogSugar.Info("Подготовка сервера к запуску")
 	routes := api.NewAppRoutes(repositoryManager, store.DB, sessionStorage)
 	httpServer := http.Server{

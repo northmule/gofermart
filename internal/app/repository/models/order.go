@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"github.com/shopspring/decimal"
 	"time"
 )
 
@@ -10,7 +11,7 @@ type Order struct {
 	Number    string          `json:"number"`
 	Status    string          `json:"status"`
 	User      *User           `json:"user"`
-	Accrual   sql.NullFloat64 `json:"accrual"`
+	Accrual   decimal.Decimal `json:"accrual"`
 	CreatedAt time.Time       `json:"created_at"`
 	DeletedAt sql.NullTime    `json:"deleted_at"`
 }

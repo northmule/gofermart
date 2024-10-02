@@ -7,6 +7,7 @@ import (
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/storage"
+	"github.com/shopspring/decimal"
 	"time"
 )
 
@@ -49,7 +50,7 @@ func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(ctx context.C
 	return id, nil
 }
 
-func (ar *AccrualRepository) UpdateTxByOrderNumber(ctx context.Context, orderNumber string, orderStatus string, accrual float64) error {
+func (ar *AccrualRepository) UpdateTxByOrderNumber(ctx context.Context, orderNumber string, orderStatus string, accrual decimal.Decimal) error {
 	ctx, cancel := context.WithTimeout(ctx, config.DataBaseConnectionTimeOut*time.Second)
 	defer cancel()
 	tx, err := ar.store.Begin()

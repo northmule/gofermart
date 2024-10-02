@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/northmule/gophermart/internal/app/services/logger"
+	"github.com/shopspring/decimal"
 	"io"
 	"net/http"
 	"strings"
@@ -50,9 +51,9 @@ func NewAccrualClient(serviceURL string, logger *logger.Logger) *AccrualClient {
 }
 
 type ResponseAccrual struct {
-	Order   string  `json:"order"`
-	Status  string  `json:"status"`
-	Accrual float64 `json:"accrual"`
+	Order   string          `json:"order"`
+	Status  string          `json:"status"`
+	Accrual decimal.Decimal `json:"accrual"`
 }
 
 func (ac *AccrualClient) SendOrderNumber(ctx context.Context, orderNumber string) (*ResponseAccrual, error) {

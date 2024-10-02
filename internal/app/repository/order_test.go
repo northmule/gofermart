@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/northmule/gophermart/internal/app/repository/models"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -54,7 +55,7 @@ func (o *OrderRepositoryTestSuite) TestFindOrdersByUserUUID() {
 	require.Len(o.T(), orders, 1)
 	require.NoError(o.T(), err)
 	order := orders[0]
-	require.Equal(o.T(), float64(134), order.Accrual.Float64)
+	require.Equal(o.T(), decimal.NewFromFloat(134), order.Accrual)
 	require.Equal(o.T(), "OK", order.Status)
 }
 

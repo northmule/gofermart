@@ -7,6 +7,7 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	orderService "github.com/northmule/gophermart/internal/app/services/order"
+	"github.com/shopspring/decimal"
 	"io"
 	"net/http"
 	"time"
@@ -26,8 +27,8 @@ func NewWithdrawHandler(manager repository.Repository, orderService *orderServic
 }
 
 type requestWithdraw struct {
-	Order string  `json:"order"`
-	Sum   float64 `json:"sum"`
+	Order string          `json:"order"`
+	Sum   decimal.Decimal `json:"sum"`
 }
 
 type responseWithdrawals struct {
@@ -66,13 +67,13 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	var balanceValue float64
+	var balanceValue decimal.Decimal
 	if userBalance != nil {
 		balanceValue = userBalance.Value
 	}
 
-	if request.Sum > balanceValue {
-		logger.LogSugar.Infof("Не достаточный баланс для списания по заказу %s. Текущий баланс:%f к списанию %f", request.Order, balanceValue, request.Sum)
+	if request.Sum.Cmp(balanceValue) == 1 {
+		logger.LogSugar.Infof("Не достаточный баланс для списания по заказу %s. Текущий баланс:%s к списанию %f", request.Order, balanceValue, request.Sum)
 		res.WriteHeader(http.StatusPaymentRequired)
 		return
 	}
@@ -129,9 +130,10 @@ func (wh *WithdrawHandler) WithdrawalsList(res http.ResponseWriter, req *http.Re
 	var responseList []responseWithdrawals
 
 	for _, withdrawn := range withdraws {
+		withdrawnValue, _ := withdrawn.Value.Float64()
 		response := responseWithdrawals{
 			Order:       withdrawn.Order.Number,
-			Sum:         withdrawn.Value,
+			Sum:         withdrawnValue,
 			ProcessedAt: withdrawn.CreatedAt.Format(time.RFC3339),
 		}
 		responseList = append(responseList, response)

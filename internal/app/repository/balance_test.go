@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/shopspring/decimal"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 	"testing"
@@ -39,7 +40,7 @@ func (s *BalanceRepositoryTestSuite) TestFindOneByUserUUID() {
 	balance, err := s.repository.FindOneByUserUUID(context.Background(), userUUID)
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), 1, balance.ID)
-	require.Equal(s.T(), float64(10), balance.Value)
+	require.Equal(s.T(), decimal.NewFromFloat(10), balance.Value)
 	require.Equal(s.T(), "uuid", balance.User.UUID)
 
 	require.NoError(s.T(), err)

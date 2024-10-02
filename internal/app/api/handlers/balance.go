@@ -42,12 +42,15 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	withdrawnValue, _ := withdrawn.Float64()
+
 	response := responseBalance{
 		Current:   0,
-		Withdrawn: withdrawn,
+		Withdrawn: withdrawnValue,
 	}
 	if balance != nil {
-		response.Current = balance.Value
+		currentValue, _ := balance.Value.Float64()
+		response.Current = currentValue
 	}
 
 	responseBalanceValue, err := json.Marshal(response)
