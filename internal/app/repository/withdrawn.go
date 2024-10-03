@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
@@ -71,14 +72,12 @@ func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userUUID string, wi
 	defer cancel()
 	tx, err := wr.store.Begin()
 	if err != nil {
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 	rows := tx.QueryRowContext(ctx, `insert into withdrawals (user_id, value, order_id) values ((select id from users where uuid= $1 limit 1), $2, $3) RETURNING id;`, userUUID, withdraw, orderID)
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 
@@ -86,15 +85,13 @@ func (wr *WithdrawnRepository) Withdraw(ctx context.Context, userUUID string, wi
 	err = rows.Scan(&withdrawID)
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 
 	rows = tx.QueryRowContext(ctx, `update user_balance set value = (value - $1) where user_id = (select id from users where uuid = $2 limit 1)`, withdraw, userUUID)
 	if rows.Err() != nil {
 		err = errors.Join(rows.Err(), tx.Rollback())
-		logger.LogSugar.Errorf("При вызове UpdateByUserID(%d) произошла ошибка %s", userUUID, err)
-		return 0, rows.Err()
+		return 0, fmt.Errorf("при вызове UpdateByUserID(%s) произошла ошибка %w", userUUID, err)
 	}
 
 	if tx.Commit() != nil {
@@ -110,20 +107,17 @@ func (wr *WithdrawnRepository) FindOneByOrderID(ctx context.Context, orderID int
 	defer cancel()
 	rows, err := wr.sqlFindOneByOrderID.QueryContext(ctx, orderID)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByOrderID(%d) произошла ошибка %s", orderID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByOrderID(%d) произошла ошибка %w", orderID, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByOrderID(%d) произошла ошибка %s", orderID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByOrderID(%d) произошла ошибка %w", orderID, err)
 	}
 	var withdraw models.Withdrawn
 	if rows.Next() {
-		err := rows.Scan(&withdraw.ID, &withdraw.UserID, &withdraw.Value, &withdraw.OrderID, &withdraw.CreatedAt)
+		err = rows.Scan(&withdraw.ID, &withdraw.UserID, &withdraw.Value, &withdraw.OrderID, &withdraw.CreatedAt)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByOrderID(%d) произошла ошибка %s", orderID, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOneByOrderID(%d) произошла ошибка %w", orderID, err)
 		}
 	}
 	return &withdraw, nil
@@ -134,20 +128,17 @@ func (wr *WithdrawnRepository) FindSumWithdrawnByUserUUID(ctx context.Context, u
 	defer cancel()
 	rows, err := wr.sqlFindSumWithdrawnByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return decimal.NewFromFloat(0), err
+		return decimal.NewFromFloat(0), fmt.Errorf("при вызове FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return decimal.NewFromFloat(0), err
+		return decimal.NewFromFloat(0), fmt.Errorf("при вызове FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	var sum sql.NullString
 	if rows.Next() {
-		err := rows.Scan(&sum)
+		err = rows.Scan(&sum)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-			return decimal.NewFromFloat(0), err
+			return decimal.NewFromFloat(0), fmt.Errorf("при обработке значений в FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 		}
 	}
 	sumDecimal, _ := decimal.NewFromString(sum.String)
@@ -159,23 +150,20 @@ func (wr *WithdrawnRepository) FindWithdrawsByUserUUID(ctx context.Context, user
 	defer cancel()
 	rows, err := wr.sqlFindWithdrawsByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindWithdrawsByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindWithdrawsByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindWithdrawsByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindWithdrawsByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	var withdraws []models.Withdrawn
 	for rows.Next() {
 		order := models.Order{}
 		withdraw := models.Withdrawn{}
-		err := rows.Scan(&withdraw.ID, &withdraw.UserID, &withdraw.Value, &withdraw.OrderID, &withdraw.CreatedAt, &order.ID, &order.Number, &order.Status, &order.CreatedAt)
+		err = rows.Scan(&withdraw.ID, &withdraw.UserID, &withdraw.Value, &withdraw.OrderID, &withdraw.CreatedAt, &order.ID, &order.Number, &order.Status, &order.CreatedAt)
 
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindWithdrawsByUserUUID(%s) произошла ошибка %s", userUUID, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindWithdrawsByUserUUID(%s) произошла ошибка %w", userUUID, err)
 		}
 		withdraw.Order = &order
 		withdraws = append(withdraws, withdraw)

@@ -67,7 +67,7 @@ func run(ctx context.Context) error {
 	accrualClient := client.NewAccrualClient(cfg.AccrualURL, logger.LogSugar)
 
 	logger.LogSugar.Info("Инициализация worker-ов")
-	worker := job.NewWorker(repositoryManager, accrualClient)
+	worker := job.NewWorker(repositoryManager, accrualClient, cfg.WorkerNum)
 	worker.Run(ctx)
 	sessionStorage := storage.NewSessionStorage()
 

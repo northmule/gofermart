@@ -13,6 +13,7 @@ const serverURLDefault = ":8081"
 const databaseURIDefault = "postgres://postgres:123@localhost:5456/gofermart?sslmode=disable"
 const accrualURLDefault = "http://localhost:8091"
 const logLevelDefault = "info"
+const workerNum = 3
 
 type GophermartConfig struct {
 	// Адрес сервера и порт
@@ -23,6 +24,8 @@ type GophermartConfig struct {
 	DatabaseURI string `env:"DATABASE_URI"`
 	// Уроверь логирования
 	LogLevel string `env:"LOG_LEVEL"`
+	// Количество воркеров для обработки задач
+	WorkerNum int `env:"WORKER_NUM"`
 }
 
 func NewGophermartConfig() (*GophermartConfig, error) {
@@ -53,6 +56,7 @@ func (c *GophermartConfig) flag() error {
 	databaseURI := cf.String("d", databaseURIDefault, "адрес подключения к базе данных")
 	accrualURL := cf.String("r", accrualURLDefault, "адрес системы расчёта начислений")
 	logLevel := cf.String("l", logLevelDefault, "уровень логирования")
+	workerNum := cf.Int("w", workerNum, "количество воркеров")
 
 	err := cf.Parse(os.Args[1:])
 	if err != nil {
@@ -76,6 +80,9 @@ func (c *GophermartConfig) flag() error {
 	if _, ok = flagsSet["l"]; ok {
 		c.LogLevel = *logLevel
 	}
+	if _, ok = flagsSet["w"]; ok {
+		c.WorkerNum = *workerNum
+	}
 	// Установка по умолчанию при отсутвии переданных значений
 	if c.ServerURL == "" {
 		c.ServerURL = *serverURL
@@ -88,6 +95,9 @@ func (c *GophermartConfig) flag() error {
 	}
 	if c.LogLevel == "" {
 		c.LogLevel = *logLevel
+	}
+	if c.WorkerNum == 0 {
+		c.WorkerNum = *workerNum
 	}
 
 	c.ServerURL = strings.ReplaceAll(c.ServerURL, "\"", "")

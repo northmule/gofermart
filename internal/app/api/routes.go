@@ -6,6 +6,8 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/northmule/gophermart/internal/app/api/handlers"
 	"github.com/northmule/gophermart/internal/app/repository"
+	"github.com/northmule/gophermart/internal/app/services/accrual"
+	"github.com/northmule/gophermart/internal/app/services/job"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/services/order"
 	"github.com/northmule/gophermart/internal/app/storage"
@@ -29,23 +31,23 @@ func NewAppRoutes(repositoryManager repository.Repository, storage storage.DBQue
 // DefiningAppRoutes маршруты приложения
 func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 
+	//Сервисы
+	orderService := order.NewOrderService()
+	jobService := job.NewJobService(ar.manager)
+	accrualService := accrual.NewAccrualService(ar.manager)
+
 	// Обработчики
-	finalizeHandler := handlers.NewFinalizeHandler()
 	registrationHandler := handlers.NewRegistrationHandler(ar.manager, ar.session)
 	checkAuthenticationHandler := handlers.NewCheckAuthenticationHandler(ar.manager, ar.session)
-	orderService := order.NewOrderService()
-	orderHandler := handlers.NewOrderHandler(ar.manager, orderService)
+	orderHandler := handlers.NewOrderHandler(ar.manager, orderService, jobService, accrualService)
 	balanceHandler := handlers.NewBalanceHandler(ar.manager)
 	withdrawHandler := handlers.NewWithdrawHandler(ar.manager, orderService)
-	jobHandler := handlers.NewJobHandler(ar.manager)
-	accrualHandler := handlers.NewAccrualHandler(ar.manager)
 	transactionHandler := handlers.NewTransactionHandler(ar.storage)
 
 	r := chi.NewRouter()
 
 	// Общие мидлвары
 	r.Use(middleware.RequestLogger(logger.LogSugar))
-	// r.Use(handlers.AddCommonContext(ctx))
 	r.Use(middleware.RequestID)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Compress(5))
@@ -55,26 +57,18 @@ func (ar *AppRoutes) DefiningAppRoutes(ctx context.Context) chi.Router {
 		r.With(
 			handlers.AddCommonContext(ctx),
 			transactionHandler.Transaction, // весь запрос в рамках транзации
-			registrationHandler.Registration,
-			balanceHandler.CreateUserBalance,
-			registrationHandler.Authentication,
-		).Post("/register", finalizeHandler.FinalizeOk)
+		).Post("/register", registrationHandler.Registration)
 
 		// аутентификация пользователя
 		r.With(
 			handlers.AddCommonContext(ctx),
-			registrationHandler.AuthenticationFromForm,
-			registrationHandler.Authentication,
-		).Post("/login", finalizeHandler.FinalizeOk)
+		).Post("/login", registrationHandler.Authentication)
 
 		// загрузка пользователем номера заказа для расчёта
 		r.With(
 			handlers.AddCommonContext(ctx),
 			checkAuthenticationHandler.Check,
-			orderHandler.UploadingOrder,
-			accrualHandler.CreateZeroAccrualForOrder,
-			jobHandler.CreateJobToProcessNewOrder,
-		).Post("/orders", finalizeHandler.FinalizeOk)
+		).Post("/orders", orderHandler.UploadingOrder)
 
 		// получение списка загруженных пользователем номеров заказов, статусов их обработки и информации о начислениях
 		r.With(

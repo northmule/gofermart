@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
@@ -49,20 +50,17 @@ func (r *UserRepository) FindOneByLogin(ctx context.Context, login string) (*mod
 	defer cancel()
 	rows, err := r.sqlFindByLogin.QueryContext(ctx, login)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByLogin(%s) произошла ошибка %s", login, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByLogin(%s) произошла ошибка %w", login, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByLogin(%s) произошла ошибка %s", login, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByLogin(%s) произошла ошибка %w", login, err)
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err = rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByLogin(%s) произошла ошибка %s", login, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOneByLogin(%s) произошла ошибка %w", login, err)
 		}
 	}
 
@@ -75,20 +73,17 @@ func (r *UserRepository) FindOneByUUID(ctx context.Context, uuid string) (*model
 	defer cancel()
 	rows, err := r.sqlFindByUUID.QueryContext(ctx, uuid)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUUID(%s) произошла ошибка %s", uuid, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByUUID(%s) произошла ошибка %w", uuid, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUUID(%s) произошла ошибка %s", uuid, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByUUID(%s) произошла ошибка %w", uuid, err)
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err = rows.Scan(&user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByUUID(%s) произошла ошибка %s", uuid, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOneByUUID(%s) произошла ошибка %w", uuid, err)
 		}
 	}
 
@@ -121,7 +116,6 @@ func (r *UserRepository) TxCreateNewUser(ctx context.Context, tx storage.TxDBQue
 	err := rows.Err()
 	if err != nil {
 		tx.AddError(err)
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 
@@ -129,7 +123,6 @@ func (r *UserRepository) TxCreateNewUser(ctx context.Context, tx storage.TxDBQue
 	err = rows.Scan(&id)
 	if err != nil {
 		tx.AddError(err)
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 	return id, nil

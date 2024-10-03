@@ -10,20 +10,21 @@ import (
 	"github.com/northmule/gophermart/internal/app/services/logger"
 )
 
-const workerNum = 3
 const maxNumberAttempts = 5
 
 type Worker struct {
 	manager        repository.Repository
 	accrualService AccrualClientInterface
 	jobChan        chan job
+	workerNum      int
 }
 
-func NewWorker(manager repository.Repository, accrualService AccrualClientInterface) *Worker {
+func NewWorker(manager repository.Repository, accrualService AccrualClientInterface, workerNum int) *Worker {
 	instance := Worker{
 		manager:        manager,
 		accrualService: accrualService,
 		jobChan:        make(chan job, 1),
+		workerNum:      workerNum,
 	}
 
 	return &instance
@@ -38,7 +39,7 @@ type job struct {
 }
 
 func (w *Worker) Run(ctx context.Context) {
-	for i := 1; i <= workerNum; i++ {
+	for i := 1; i <= w.workerNum; i++ {
 		go w.worker(ctx, i, w.jobChan)
 	}
 
@@ -70,11 +71,11 @@ func (w *Worker) worker(ctx context.Context, num int, jobCh <-chan job) {
 	var errorTooManyRequests *client.ErrorTooManyRequests
 	var errorInternalServerError *client.ErrorInternalServerError
 	var errorUndefined *client.ErrorUndefined
-	logger.LogSugar.Infof("Запуск worker %d из %d", num, workerNum)
+	logger.LogSugar.Infof("Запуск worker %d из %d", num, w.workerNum)
 	for {
 		select {
 		case <-ctx.Done():
-			logger.LogSugar.Infof("Останавливаю worker %d из %d по сигналу", num, workerNum)
+			logger.LogSugar.Infof("Останавливаю worker %d из %d по сигналу", num, w.workerNum)
 			return
 		case item := <-jobCh:
 			response, err := w.accrualService.SendOrderNumber(ctx, item.jobRun.OrderNumber)

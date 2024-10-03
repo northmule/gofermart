@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
@@ -46,21 +47,18 @@ func (br *BalanceRepository) FindOneByUserUUID(ctx context.Context, userUUID str
 	defer cancel()
 	rows, err := br.sqlFindByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	var balance models.Balance
 	var user models.User
 	if rows.Next() {
-		err := rows.Scan(&balance.ID, &balance.Value, &balance.UpdatedAt, &user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err = rows.Scan(&balance.ID, &balance.Value, &balance.UpdatedAt, &user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByUserUUID(%s) произошла ошибка %s", userUUID, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOneByUserUUID(%s) произошла ошибка %w", userUUID, err)
 		}
 	}
 	balance.User = user
@@ -73,14 +71,12 @@ func (br *BalanceRepository) CreateBalanceByUserUUID(ctx context.Context, userUU
 	rows := br.sqlCreateBalanceByUserUUID.QueryRowContext(ctx, userUUID)
 	err := rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове CreateBalanceByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return 0, err
+		return 0, fmt.Errorf("при вызове CreateBalanceByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 
 	var id int64
 	err = rows.Scan(&id)
 	if err != nil {
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 
@@ -94,15 +90,13 @@ func (br *BalanceRepository) TxCreateBalanceByUserUUID(ctx context.Context, tx s
 	err := rows.Err()
 	if err != nil {
 		tx.AddError(err)
-		logger.LogSugar.Errorf("При вызове CreateBalanceByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return 0, err
+		return 0, fmt.Errorf("при вызове CreateBalanceByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 
 	var id int64
 	err = rows.Scan(&id)
 	if err != nil {
 		tx.AddError(err)
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 

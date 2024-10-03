@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/constants"
 	"github.com/northmule/gophermart/internal/app/repository/models"
@@ -50,20 +51,17 @@ func (o *OrderRepository) FindOneByNumber(ctx context.Context, number string) (*
 	defer cancel()
 	rows, err := o.sqlFindByNumber.QueryContext(ctx, number)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByNumber(%s) произошла ошибка %s", number, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByNumber(%s) произошла ошибка %w", number, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOneByNumber(%s) произошла ошибка %s", number, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOneByNumber(%s) произошла ошибка %w", number, err)
 	}
 
 	if rows.Next() {
-		err := rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
+		err = rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &user.ID, &user.Login, &user.Password, &user.CreatedAt, &user.UUID)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOneByNumber(%s) произошла ошибка %s", number, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOneByNumber(%s) произошла ошибка %w", number, err)
 		}
 	}
 	order.User = &user
@@ -84,7 +82,6 @@ func (o *OrderRepository) FindByNumberOrCreate(ctx context.Context, orderNumber 
 	if currentOrder == nil || currentOrder.ID == 0 {
 		orderID, err := o.Save(ctx, order, userUUID)
 		if err != nil {
-			logger.LogSugar.Error(err)
 			return nil, err
 		}
 		order.ID = int(orderID)
@@ -106,25 +103,21 @@ func (o *OrderRepository) Save(ctx context.Context, order models.Order, userUUID
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 
 	var orderID int64
 	err = rows.Scan(&orderID)
 	if err != nil {
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 	rows = tx.QueryRowContext(ctx, `insert into user_orders (user_id, order_id) values ((select id from users where uuid=$1 limit 1), $2) RETURNING id;`, userUUID, orderID)
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 	if err = tx.Commit(); err != nil {
-		logger.LogSugar.Error(err)
 		return 0, err
 	}
 	return orderID, nil
@@ -135,21 +128,18 @@ func (o *OrderRepository) FindOrdersByUserUUID(ctx context.Context, userUUID str
 	defer cancel()
 	rows, err := o.sqlFindOrdersByUserUUID.QueryContext(ctx, userUUID)
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOrdersByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOrdersByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	err = rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове FindOrdersByUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return nil, err
+		return nil, fmt.Errorf("при вызове FindOrdersByUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 	var orders []models.Order
 	for rows.Next() {
 		order := models.Order{}
-		err := rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &order.Accrual)
+		err = rows.Scan(&order.ID, &order.Number, &order.Status, &order.CreatedAt, &order.DeletedAt, &order.Accrual)
 		if err != nil {
-			logger.LogSugar.Errorf("При обработке значений в FindOrdersByUserUUID(%s) произошла ошибка %s", userUUID, err)
-			return nil, err
+			return nil, fmt.Errorf("при обработке значений в FindOrdersByUserUUID(%s) произошла ошибка %w", userUUID, err)
 		}
 		orders = append(orders, order)
 	}

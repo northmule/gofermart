@@ -3,7 +3,6 @@ package handlers
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/google/uuid"
 	"github.com/northmule/gophermart/internal/app/api/rctx"
 	"github.com/northmule/gophermart/internal/app/repository"
@@ -38,121 +37,114 @@ func NewRegistrationHandler(manager repository.Repository, session storage.Sessi
 	return instance
 }
 
-func (r *RegistrationHandler) Registration(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		rawBody, err := io.ReadAll(req.Body)
-		if err != nil {
-			logger.LogSugar.Error(err)
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer req.Body.Close()
+func (r *RegistrationHandler) Registration(res http.ResponseWriter, req *http.Request) {
 
-		var request registrationRequestBody
-		if err = json.Unmarshal(rawBody, &request); err != nil {
-			logger.LogSugar.Infof("Пришли данные регистрации: %s. Запрос вызвал ошибку.", string(rawBody))
-			res.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	rawBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		logger.LogSugar.Error(err)
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer req.Body.Close()
 
-		user, err := r.manager.User().FindOneByLogin(req.Context(), request.Login)
-		if err != nil {
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if user != nil && user.Login == request.Login {
-			logger.LogSugar.Infof("Логин '%s' уже занят  пользователем с uuid '%s'", request.Login, user.UUID)
-			res.WriteHeader(http.StatusConflict)
-			return
-		}
+	var request registrationRequestBody
+	if err = json.Unmarshal(rawBody, &request); err != nil {
+		logger.LogSugar.Infof("Пришли данные регистрации: %s. Запрос вызвал ошибку.", string(rawBody))
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-		newUser := models.User{
-			Login:    request.Login,
-			Password: util.PasswordHash(request.Password),
-			UUID:     uuid.NewString(),
-		}
-		tx := req.Context().Value(rctx.TransactionCtxKey).(*storage.Transaction)
-		userID, err := r.manager.User().TxCreateNewUser(req.Context(), tx, newUser)
-		if err != nil {
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
+	user, err := r.manager.User().FindOneByLogin(req.Context(), request.Login)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if user != nil && user.Login == request.Login {
+		logger.LogSugar.Infof("Логин '%s' уже занят  пользователем с uuid '%s'", request.Login, user.UUID)
+		res.WriteHeader(http.StatusConflict)
+		return
+	}
 
-		if userID == 0 {
-			logger.LogSugar.Error("Пустое значение ID при регистрации пользователя")
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		newUser.ID = int(userID)
-		logger.LogSugar.Infof("Зарегистрирован новый пользователь '%s' с uuid '%s'", newUser.Login, newUser.UUID)
+	newUser := models.User{
+		Login:    request.Login,
+		Password: util.PasswordHash(request.Password),
+		UUID:     uuid.NewString(),
+	}
+	tx := req.Context().Value(rctx.TransactionCtxKey).(*storage.Transaction)
+	userID, err := r.manager.User().TxCreateNewUser(req.Context(), tx, newUser)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
-		ctx := context.WithValue(req.Context(), rctx.UserCtxKey, newUser)
-		req = req.WithContext(ctx)
+	if userID == 0 {
+		logger.LogSugar.Error("Пустое значение ID при регистрации пользователя")
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	newUser.ID = int(userID)
+	logger.LogSugar.Infof("Зарегистрирован новый пользователь '%s' с uuid '%s'", newUser.Login, newUser.UUID)
 
-		next.ServeHTTP(res, req)
-	})
+	ctx := context.WithValue(req.Context(), rctx.UserCtxKey, newUser)
+	req = req.WithContext(ctx)
+
+	_, err = r.manager.Balance().TxCreateBalanceByUserUUID(req.Context(), tx, newUser.UUID)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	token, tokenValue, cookie, tokenExp := authentication.Authentication(newUser.UUID)
+
+	http.SetCookie(res, cookie)
+	r.session.Add(token, *tokenExp)
+
+	res.Header().Set("Authorization", tokenValue)
+	logger.LogSugar.Infof("Пользователь прошёл аунтификацию, выдан токен с uuid %s", tokenValue)
+	res.WriteHeader(http.StatusOK)
 }
 
-func (r *RegistrationHandler) AuthenticationFromForm(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		rawBody, err := io.ReadAll(req.Body)
-		if err != nil {
-			logger.LogSugar.Errorf(err.Error())
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		defer req.Body.Close()
+func (r *RegistrationHandler) Authentication(res http.ResponseWriter, req *http.Request) {
 
-		var request authenticationRequestBody
-		if err = json.Unmarshal(rawBody, &request); err != nil {
-			logger.LogSugar.Infof("Пришли данные аунтификации: %s. Запрос вызвал ошибку.", string(rawBody))
-			res.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	rawBody, err := io.ReadAll(req.Body)
+	if err != nil {
+		logger.LogSugar.Errorf(err.Error())
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer req.Body.Close()
 
-		user, err := r.manager.User().FindOneByLogin(req.Context(), request.Login)
-		if err != nil {
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		if user == nil || len(request.Password) == 0 || user.Password != util.PasswordHash(request.Password) {
-			logger.LogSugar.Infof("Неверная пара логин/пароль %s/****", request.Login)
-			res.WriteHeader(http.StatusUnauthorized)
-			return
-		}
+	var request authenticationRequestBody
+	if err = json.Unmarshal(rawBody, &request); err != nil {
+		logger.LogSugar.Infof("Пришли данные аунтификации: %s. Запрос вызвал ошибку.", string(rawBody))
+		res.WriteHeader(http.StatusBadRequest)
+		return
+	}
 
-		ctx := context.WithValue(req.Context(), rctx.UserCtxKey, *user)
-		req = req.WithContext(ctx)
+	user, err := r.manager.User().FindOneByLogin(req.Context(), request.Login)
+	if err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if user == nil || len(request.Password) == 0 || user.Password != util.PasswordHash(request.Password) {
+		logger.LogSugar.Infof("Неверная пара логин/пароль %s/****", request.Login)
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
 
-		next.ServeHTTP(res, req)
-	})
-}
+	logger.LogSugar.Infof("Аунтификация пользователя: %s", user.UUID)
+	if user.UUID == "" {
+		logger.LogSugar.Info("Пользователь не распознан для аунтификации")
+		res.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	token, tokenValue, cookie, tokenExp := authentication.Authentication(user.UUID)
 
-func (r *RegistrationHandler) Authentication(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		user := req.Context().Value(rctx.UserCtxKey).(models.User)
-		logger.LogSugar.Infof("Аунтификация пользователя: %s", user.UUID)
-		if user.UUID == "" {
-			logger.LogSugar.Info("Пользователь не распознан для аунтификации")
-			res.WriteHeader(http.StatusUnauthorized)
-			return
-		}
-		token, tokenExp := authentication.GenerateToken(user.UUID, authentication.HMACTokenExp, authentication.HMACSecretKey)
-		tokenValue := fmt.Sprintf("%s:%s", token, user.UUID)
+	http.SetCookie(res, cookie)
+	r.session.Add(token, *tokenExp)
 
-		http.SetCookie(res, &http.Cookie{
-			Name:    authentication.CookieAuthName,
-			Value:   tokenValue,
-			Expires: tokenExp,
-			Secure:  false,
-			Path:    "/",
-		})
+	res.Header().Set("Authorization", tokenValue)
+	logger.LogSugar.Infof("Пользователь прошёл аунтификацию, выдан токен с uuid %s", tokenValue)
+	res.WriteHeader(http.StatusOK)
 
-		r.session.Add(token, tokenExp)
-
-		res.Header().Set("Authorization", tokenValue)
-		logger.LogSugar.Infof("Пользователь прошёл аунтификацию, выдан токен с uuid %s", tokenValue)
-
-		next.ServeHTTP(res, req)
-	})
 }

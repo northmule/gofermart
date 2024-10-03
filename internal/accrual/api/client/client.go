@@ -37,6 +37,12 @@ func (err ErrorUndefined) Error() string {
 	return fmt.Sprintf("сервис %s вернул не обработаный код ошибки %d", ServiceName, err.code)
 }
 
+type ResponseAccrual struct {
+	Order   string          `json:"order"`
+	Status  string          `json:"status"`
+	Accrual decimal.Decimal `json:"accrual"`
+}
+
 type AccrualClient struct {
 	serviceURL string
 	logger     *logger.Logger
@@ -48,12 +54,6 @@ func NewAccrualClient(serviceURL string, logger *logger.Logger) *AccrualClient {
 		logger:     logger,
 	}
 	return instance
-}
-
-type ResponseAccrual struct {
-	Order   string          `json:"order"`
-	Status  string          `json:"status"`
-	Accrual decimal.Decimal `json:"accrual"`
 }
 
 func (ac *AccrualClient) SendOrderNumber(ctx context.Context, orderNumber string) (*ResponseAccrual, error) {

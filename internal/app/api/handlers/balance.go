@@ -6,7 +6,6 @@ import (
 	"github.com/northmule/gophermart/internal/app/repository"
 	"github.com/northmule/gophermart/internal/app/repository/models"
 	"github.com/northmule/gophermart/internal/app/services/logger"
-	"github.com/northmule/gophermart/internal/app/storage"
 	"go.uber.org/zap"
 	"net/http"
 )
@@ -45,7 +44,6 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 	withdrawnValue, _ := withdrawn.Float64()
 
 	response := responseBalance{
-		Current:   0,
 		Withdrawn: withdrawnValue,
 	}
 	if balance != nil {
@@ -66,18 +64,4 @@ func (bh *BalanceHandler) Balance(res http.ResponseWriter, req *http.Request) {
 		http.Error(res, "Ответ не передан", http.StatusInternalServerError)
 		return
 	}
-}
-
-func (bh *BalanceHandler) CreateUserBalance(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		newUser := req.Context().Value(rctx.UserCtxKey).(models.User)
-		tx := req.Context().Value(rctx.TransactionCtxKey).(*storage.Transaction)
-		_, err := bh.manager.Balance().TxCreateBalanceByUserUUID(req.Context(), tx, newUser.UUID)
-		if err != nil {
-			logger.LogSugar.Error(err)
-			res.WriteHeader(http.StatusInternalServerError)
-			return
-		}
-		next.ServeHTTP(res, req)
-	})
 }

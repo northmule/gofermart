@@ -4,6 +4,7 @@ import (
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"net/http"
 	"time"
@@ -52,4 +53,21 @@ func ValidateToken(userUUID string, token string, secretKey string) bool {
 	}
 	logger.LogSugar.Infof("Токен %s прошёл проверку", token)
 	return true
+}
+
+func Authentication(userUUID string) (string, string, *http.Cookie, *time.Time) {
+
+	logger.LogSugar.Infof("Аунтификация пользователя: %s", userUUID)
+	token, tokenExp := GenerateToken(userUUID, HMACTokenExp, HMACSecretKey)
+	tokenValue := fmt.Sprintf("%s:%s", token, userUUID)
+
+	cookie := &http.Cookie{
+		Name:    CookieAuthName,
+		Value:   tokenValue,
+		Expires: tokenExp,
+		Secure:  false,
+		Path:    "/",
+	}
+
+	return token, tokenValue, cookie, &tokenExp
 }

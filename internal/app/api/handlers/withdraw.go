@@ -86,8 +86,8 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 		return
 	}
 	if order == nil || order.ID == 0 {
-		logger.LogSugar.Infof("Заказ с номером %s, по которому требуется списать %f ещё не создан.", request.Order, request.Sum)
-		res.WriteHeader(http.StatusUnprocessableEntity)
+		logger.LogSugar.Infof("Заказ с номером %s, по которому требуется списать %s ещё не создан.", request.Order, request.Sum)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	existWithdraw, err := wh.manager.Withdrawn().FindOneByOrderID(req.Context(), order.ID)
@@ -98,7 +98,7 @@ func (wh *WithdrawHandler) Withdraw(res http.ResponseWriter, req *http.Request) 
 	}
 	if existWithdraw != nil && existWithdraw.ID > 0 {
 		logger.LogSugar.Infof("Списание по заказу уже было выполнено для заказа с номером %s", request.Order)
-		res.WriteHeader(http.StatusUnprocessableEntity)
+		res.WriteHeader(http.StatusBadRequest)
 		return
 	}
 	_, err = wh.manager.Withdrawn().Withdraw(req.Context(), user.UUID, request.Sum, order.ID)

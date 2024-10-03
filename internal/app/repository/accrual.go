@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"github.com/northmule/gophermart/config"
 	"github.com/northmule/gophermart/internal/app/services/logger"
 	"github.com/northmule/gophermart/internal/app/storage"
@@ -37,8 +38,7 @@ func (ar *AccrualRepository) CreateAccrualByOrderNumberAndUserUUID(ctx context.C
 	rows := ar.sqlCreateAccrualZeroValue.QueryRowContext(ctx, orderNumber, userUUID)
 	err := rows.Err()
 	if err != nil {
-		logger.LogSugar.Errorf("При вызове CreateAccrualByOrderNumberAndUserUUID(%s) произошла ошибка %s", userUUID, err)
-		return 0, err
+		return 0, fmt.Errorf("при вызове CreateAccrualByOrderNumberAndUserUUID(%s) произошла ошибка %w", userUUID, err)
 	}
 
 	var id int64
@@ -62,22 +62,19 @@ func (ar *AccrualRepository) UpdateTxByOrderNumber(ctx context.Context, orderNum
 	err = rows.Err()
 	if err != nil {
 		err = errors.Join(err, tx.Rollback())
-		logger.LogSugar.Errorf("При вызове UpdateByOrderNumber(%s, %s, %f) произошла ошибка %s", orderNumber, orderStatus, accrual, err)
-		return err
+		return fmt.Errorf("при вызове UpdateByOrderNumber(%s, %s, %s) произошла ошибка %w", orderNumber, orderStatus, accrual, err)
 	}
 
 	rows = tx.QueryRowContext(ctx, `update orders set status = $1 where number = $2`, orderStatus, orderNumber)
 	if rows.Err() != nil {
 		err = errors.Join(rows.Err(), tx.Rollback())
-		logger.LogSugar.Errorf("При вызове UpdateByOrderNumber(%s, %s, %f) произошла ошибка %s", orderNumber, orderStatus, accrual, err)
-		return err
+		return fmt.Errorf("при вызове UpdateByOrderNumber(%s, %s, %s произошла ошибка %w", orderNumber, orderStatus, accrual, err)
 	}
 
 	rows = tx.QueryRowContext(ctx, `update user_balance set value = value + $1 where user_id = (select a.user_id from accruals a where a.order_id = (select o.id from orders o where o.number = $2 limit 1) limit 1)`, accrual, orderNumber)
 	if rows.Err() != nil {
 		err = errors.Join(rows.Err(), tx.Rollback())
-		logger.LogSugar.Errorf("При вызове UpdateByOrderNumber(%s, %s, %f) произошла ошибка %s", orderNumber, orderStatus, accrual, err)
-		return err
+		return fmt.Errorf("при вызове UpdateByOrderNumber(%s, %s, %s) произошла ошибка %w", orderNumber, orderStatus, accrual, err)
 	}
 
 	if tx.Commit() != nil {
