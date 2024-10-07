@@ -1,0 +1,1 @@
+mockgen -destination=internal/app/storage/mock/storage_mock.go -package=mocks github.com/northmule/gophermart/internal/app/storage DBQuery,TxDBQuery
